@@ -39,6 +39,8 @@ NODE_USE_ENV_PROXY=1 node tools/get-polyhaven.mjs model sofa_03   # also: textur
 - `shoot.mjs` exits with "PROBLEMS" if the page logged errors or a file failed to load — fix those too.
 
 ## Things learned the hard way
+- Start the server as a background task with the longest timeout (2 hours). It is stopped when the
+  limit runs out; if `shoot.mjs` times out on `page.goto`, the server has died — restart it.
 - Indoor scenes: walls are one-sided (visible from inside only) so the camera can orbit outside;
   give them `shadowSide = DoubleSide` so they still block sunlight.
 - A lamp's light casts big shadows from anything just above it (shelves) — keep lamps away from shelves.

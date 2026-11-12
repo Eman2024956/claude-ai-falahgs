@@ -25,10 +25,11 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, dev
 const problems = [];
 page.on('console', (m) => { if (m.type() === 'error') problems.push(m.text()); });
 page.on('pageerror', (e) => problems.push(String(e)));
-page.on('requestfailed', (r) => problems.push(`could not load ${r.url()}`));
+page.on('requestfailed', (r) => r.failure()?.errorText !== 'net::ERR_ABORTED' && problems.push(`could not load ${r.url()} (${r.failure()?.errorText})`));
 page.on('response', (r) => { if (r.status() >= 400) problems.push(`${r.status()} ${r.url()}`); });
 
-for (const view of ['main', 'front', 'side', 'top']) {
+// Extra angles can be listed after the scene name, e.g.  npm run shoot -- 02-cozy-room-sunset window sofa
+for (const view of ['main', 'front', 'side', 'top', ...process.argv.slice(3)]) {
   await page.goto(`http://localhost:${port}/scenes/${name}/?view=${view}&time=${time}`);
   await page.waitForFunction(() => window.__sceneReady === true, null, { timeout: 60000 });
   const file = path.join(outDir, `${view}.png`);

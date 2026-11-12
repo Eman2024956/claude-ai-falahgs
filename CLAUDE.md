@@ -18,10 +18,12 @@ one-line explanation, describe what changed and what it looks like rather than h
 - `scenes/<number>-<name>/` — one folder per scene: `index.html` (the page) and `scene.js` (the scene).
   Each `scene.js` starts with a `SETTINGS` block — the "things you can change" (colours, sizes, speeds).
 - `lib/stage.js` — shared setup (window, camera, mouse orbit controls, check-picture camera angles).
+- `lib/assets.js` — loads Poly Haven models, surfaces and sky photos; `place()` sits an object on a surface.
 - `tools/serve.mjs` — small local web server. `tools/shoot.mjs` — takes the check pictures.
+- `tools/get-polyhaven.mjs` — downloads a free Poly Haven model / texture / sky into `assets/polyhaven/`.
+- `tools/make-zip.sh` — packs the workshop into `three-scenes.zip` for the user to download.
 - `renders/<scene>/` — check pictures: `main`, `front`, `side`, `top`.
-- `assets/` — downloaded free assets (create when first needed). Record each one's source and
-  licence in `assets/CREDITS.md`.
+- `assets/` — downloaded free assets. Record each one's source and licence in `assets/CREDITS.md`.
 - `whale-of-dreams/` — an earlier, separate project. Leave it alone unless asked.
 
 ## How to build and check a scene
@@ -29,12 +31,20 @@ one-line explanation, describe what changed and what it looks like rather than h
 npm install                        # once per fresh session
 node tools/serve.mjs               # run in the background; http://localhost:5173/
 node tools/shoot.mjs 01-hello-shapes   # pictures -> renders/01-hello-shapes/, prints any errors
+node tools/shoot.mjs 02-cozy-room-sunset window sofa   # extra angles a scene defines itself
+NODE_USE_ENV_PROXY=1 node tools/get-polyhaven.mjs model sofa_03   # also: texture <name>, hdri <name> 2k
 ```
 - New scene: copy `scenes/01-hello-shapes/`, rename with the next number, edit `scene.js`.
 - `?view=front|side|top` picks a camera angle; `?time=2.5` freezes animation at that second.
 - `shoot.mjs` exits with "PROBLEMS" if the page logged errors or a file failed to load — fix those too.
 
 ## Things learned the hard way
+- Indoor scenes: walls are one-sided (visible from inside only) so the camera can orbit outside;
+  give them `shadowSide = DoubleSide` so they still block sunlight.
+- A lamp's light casts big shadows from anything just above it (shelves) — keep lamps away from shelves.
+- Some Poly Haven wall photos are dark; use `usePhotoColor: false` to keep the bumps but pick the colour.
+- `loadSky()` finds the sun in the sky photo; scenes rotate the sky so it lines up with the sunlight.
+- Node downloads need `NODE_USE_ENV_PROXY=1` to get through this environment's proxy.
 - Playwright is pre-installed globally; load it with `createRequire` (a plain `import` fails). Do not reinstall it.
 - Headless Chromium needs `--use-angle=swiftshader --enable-unsafe-swiftshader` for 3D to draw.
 - Shadows: set `material.shadowSide = THREE.FrontSide` plus a small `normalBias`, otherwise a

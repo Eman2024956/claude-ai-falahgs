@@ -1,0 +1,1 @@
+Create a premium black luxury-car website. Put the car inside a dark cinematic showroom with marble flooring, soft volumetric-looking lighting, floating particles and a camera that slowly moves around the car. When the user scrolls, transition from the showroom to the product specifications.

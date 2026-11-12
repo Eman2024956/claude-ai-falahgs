@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ScenePlan",
+  "description": "Declarative scene + animation plan. The runtime interprets this document; it never executes code from it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "meta", "theme", "scene", "camera", "timeline", "content"],
+  "properties": {
+    "version": { "const": 1 },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "brief", "intents", "unresolved"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 300 },
+        "brief": { "type": "string", "maxLength": 4000 },
+        "intents": {
+          "description": "Traceability: which phrase of the brief set which parts of the plan.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["intent", "phrase", "sets"],
+            "properties": {
+              "intent": { "type": "string", "maxLength": 60 },
+              "phrase": { "type": "string", "maxLength": 200 },
+              "sets": { "type": "array", "items": { "type": "string", "maxLength": 80 } }
+            }
+          }
+        },
+        "unresolved": {
+          "description": "Clauses of the brief that no rule understood. They are reported, never improvised.",
+          "type": "array",
+          "items": { "type": "string", "maxLength": 300 }
+        }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["background", "text", "muted", "accent"],
+      "properties": {
+        "background": { "$ref": "#/$defs/color" },
+        "text": { "$ref": "#/$defs/color" },
+        "muted": { "$ref": "#/$defs/color" },
+        "accent": { "$ref": "#/$defs/color" }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "floor", "subject", "lights"],
+      "properties": {
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "radius", "height", "wallColor", "fogColor", "fogDensity", "exposure"],
+          "properties": {
+            "type": { "enum": ["showroom"] },
+            "radius": { "type": "number", "minimum": 8, "maximum": 60 },
+            "height": { "type": "number", "minimum": 3, "maximum": 20 },
+            "wallColor": { "$ref": "#/$defs/color" },
+            "fogColor": { "$ref": "#/$defs/color" },
+            "fogDensity": { "type": "number", "minimum": 0, "maximum": 0.2 },
+            "exposure": { "type": "number", "minimum": 0.1, "maximum": 3 },
+            "slats": {
+              "description": "Vertical light slats on the wall.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["count", "color", "intensity"],
+              "properties": {
+                "count": { "type": "integer", "minimum": 0, "maximum": 96 },
+                "color": { "$ref": "#/$defs/color" },
+                "intensity": { "type": "number", "minimum": 0, "maximum": 10 }
+              }
+            }
+          }
+        },
+        "floor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["material", "baseColor", "veinColor", "accentColor", "veinScale", "tileSize", "reflectivity", "roughness"],
+          "properties": {
+            "material": { "enum": ["marble"] },
+            "baseColor": { "$ref": "#/$defs/color" },
+            "veinColor": { "$ref": "#/$defs/color" },
+            "accentColor": { "$ref": "#/$defs/color" },
+            "veinScale": { "type": "number", "minimum": 0.2, "maximum": 10 },
+            "tileSize": { "type": "number", "minimum": 0, "maximum": 10 },
+            "reflectivity": { "$ref": "#/$defs/unit" },
+            "roughness": { "$ref": "#/$defs/unit" },
+            "ring": {
+              "description": "Light ring inlaid in the floor around the subject.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["radius", "color", "intensity"],
+              "properties": {
+                "radius": { "type": "number", "minimum": 1, "maximum": 12 },
+                "color": { "$ref": "#/$defs/color" },
+                "intensity": { "type": "number", "minimum": 0, "maximum": 10 }
+              }
+            }
+          }
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["asset", "paint", "glassColor", "headlightColor", "taillightColor", "rotationY"],
+          "properties": {
+            "asset": { "description": "Name of a model in the runtime's asset registry.", "enum": ["coupe"] },
+            "paint": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["color", "metalness", "roughness", "clearcoat"],
+              "properties": {
+                "color": { "$ref": "#/$defs/color" },
+                "metalness": { "$ref": "#/$defs/unit" },
+                "roughness": { "$ref": "#/$defs/unit" },
+                "clearcoat": { "$ref": "#/$defs/unit" }
+              }
+            },
+            "glassColor": { "$ref": "#/$defs/color" },
+            "headlightColor": { "$ref": "#/$defs/color" },
+            "taillightColor": { "$ref": "#/$defs/color" },
+            "rotationY": { "type": "number", "minimum": -360, "maximum": 360 }
+          }
+        },
+        "lights": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "type", "color", "intensity"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "type": { "enum": ["softbox", "spot", "ambient"] },
+              "color": { "$ref": "#/$defs/color" },
+              "intensity": { "type": "number", "minimum": 0, "maximum": 100 },
+              "position": { "$ref": "#/$defs/vec3" },
+              "target": { "$ref": "#/$defs/vec3" },
+              "size": { "description": "softbox: [length, width] in metres", "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number", "minimum": 0.05, "maximum": 30 } },
+              "angle": { "description": "spot: cone half-angle in degrees", "type": "number", "minimum": 2, "maximum": 80 },
+              "beam": {
+                "description": "spot: visible light shaft (volumetric look).",
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["opacity"],
+                "properties": { "opacity": { "$ref": "#/$defs/unit" } }
+              }
+            }
+          }
+        },
+        "particles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "color", "size", "opacity", "bounds", "drift"],
+          "properties": {
+            "count": { "type": "integer", "minimum": 0, "maximum": 20000 },
+            "color": { "$ref": "#/$defs/color" },
+            "size": { "type": "number", "minimum": 0.001, "maximum": 0.5 },
+            "opacity": { "$ref": "#/$defs/unit" },
+            "bounds": { "$ref": "#/$defs/vec3" },
+            "drift": { "type": "number", "minimum": 0, "maximum": 2 }
+          }
+        }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fov", "orbit", "damping"],
+      "properties": {
+        "fov": { "type": "number", "minimum": 10, "maximum": 90 },
+        "damping": { "description": "Seconds for the camera to settle on a new pose.", "type": "number", "minimum": 0, "maximum": 5 },
+        "orbit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target", "radius", "elevation", "azimuth", "speed"],
+          "properties": {
+            "target": { "$ref": "#/$defs/vec3" },
+            "radius": { "type": "number", "minimum": 1, "maximum": 40 },
+            "elevation": { "description": "degrees above the floor", "type": "number", "minimum": 0, "maximum": 89 },
+            "azimuth": { "description": "degrees; 0 looks at the subject's side, 90 at its front", "type": "number", "minimum": -720, "maximum": 720 },
+            "speed": { "description": "degrees per second", "type": "number", "minimum": -30, "maximum": 30 }
+          }
+        }
+      }
+    },
+    "timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["driver", "scrollPages", "smoothing", "tracks"],
+      "properties": {
+        "driver": { "enum": ["scroll"] },
+        "scrollPages": { "description": "Total scroll length in viewport heights.", "type": "number", "minimum": 1, "maximum": 20 },
+        "smoothing": { "description": "Seconds of easing applied to scroll progress.", "type": "number", "minimum": 0, "maximum": 2 },
+        "tracks": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["target", "keys"],
+            "properties": {
+              "target": {
+                "description": "An animatable property from the runtime's fixed list, or lights.<id>.intensity.",
+                "type": "string",
+                "pattern": "^(camera\\.(azimuth|elevation|radius|fov|orbit|frame|target\\.[xyz])|environment\\.(exposure|reflections)|beams\\.opacity|particles\\.opacity|floor\\.(reflectivity|ring)|subject\\.lamps|lights\\.[a-z][a-z0-9-]*\\.intensity)$"
+              },
+              "keys": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 32,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["at", "value"],
+                  "properties": {
+                    "at": { "$ref": "#/$defs/unit" },
+                    "value": { "type": "number", "minimum": -1000, "maximum": 1000 },
+                    "ease": { "enum": ["linear", "inOutSine", "inOutCubic", "outCubic", "inCubic"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["brand", "sections"],
+      "properties": {
+        "brand": { "type": "string", "maxLength": 40 },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "range", "heading"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "kind": { "enum": ["hero", "statement", "specs", "cta"] },
+              "nav": { "description": "Label in the header navigation.", "type": "string", "maxLength": 24 },
+              "range": { "description": "Scroll progress [from, to] during which the section is on screen.", "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/unit" } },
+              "align": { "enum": ["left", "right", "center"] },
+              "eyebrow": { "type": "string", "maxLength": 80 },
+              "heading": { "type": "string", "maxLength": 120 },
+              "body": { "type": "string", "maxLength": 600 },
+              "stats": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["label", "value"],
+                  "properties": {
+                    "label": { "type": "string", "maxLength": 40 },
+                    "value": { "type": "string", "maxLength": 16 },
+                    "unit": { "type": "string", "maxLength": 12 }
+                  }
+                }
+              },
+              "actions": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["label", "href"],
+                  "properties": {
+                    "label": { "type": "string", "maxLength": 40 },
+                    "href": { "description": "In-page anchors and mailto only.", "type": "string", "pattern": "^(#[a-z0-9-]*|mailto:[^\\s]+)$" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "unit": { "type": "number", "minimum": 0, "maximum": 1 },
+    "vec3": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number", "minimum": -100, "maximum": 100 } },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 32 }
+  }
+}

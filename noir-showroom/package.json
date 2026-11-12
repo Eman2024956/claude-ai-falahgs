@@ -1,0 +1,12 @@
+{
+  "name": "noir-showroom",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A luxury-car showroom site rendered from a declarative scene plan.",
+  "scripts": {
+    "plan": "node planner/compile.mjs",
+    "check": "node planner/compile.mjs --check",
+    "start": "python3 -m http.server 8124"
+  }
+}

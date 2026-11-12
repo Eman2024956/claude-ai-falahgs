@@ -1,2 +1,4 @@
 node_modules/
 three-scenes.zip
+renders/*/video/frames*/
+renders/*/video/*.mov

@@ -19,3 +19,9 @@ from [Poly Haven](https://polyhaven.com). Downloaded with `tools/get-polyhaven.m
 | wool_boucle | texture (rug) | 02-cozy-room-sunset |
 | qwantani_sunset | sky photo (2k) | 02-cozy-room-sunset |
 | belfast_sunset | sky photo (2k) | spare, not currently used |
+
+## The user's own files
+
+| Asset | Type | Used in |
+|---|---|---|
+| logos/tawassl.svg | the user's Tawassl logo | 03-tawassl-logo-reveal |

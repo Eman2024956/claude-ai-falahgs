@@ -21,6 +21,9 @@ one-line explanation, describe what changed and what it looks like rather than h
 - `lib/assets.js` — loads Poly Haven models, surfaces and sky photos; `place()` sits an object on a surface.
 - `tools/serve.mjs` — small local web server. `tools/shoot.mjs` — takes the check pictures.
 - `tools/get-polyhaven.mjs` — downloads a free Poly Haven model / texture / sky into `assets/polyhaven/`.
+- `tools/render-video.mjs` — renders a scene's animation to video: `node tools/render-video.mjs <scene>` (MP4)
+  and `... <scene> transparent` (ProRes 4444 .mov + WebM with see-through background). 1920×1080, 30 fps, 4 s
+  by default (`SECONDS`, `FPS`, `WIDTH`, `HEIGHT` to change). Frames and the big .mov are not saved to git.
 - `tools/make-zip.sh` — packs the workshop into `three-scenes.zip` for the user to download.
 - `renders/<scene>/` — check pictures: `main`, `front`, `side`, `top`.
 - `assets/` — downloaded free assets. Record each one's source and licence in `assets/CREDITS.md`.
@@ -39,6 +42,12 @@ NODE_USE_ENV_PROXY=1 node tools/get-polyhaven.mjs model sofa_03   # also: textur
 - `shoot.mjs` exits with "PROBLEMS" if the page logged errors or a file failed to load — fix those too.
 
 ## Things learned the hard way
+- Metal looking washed-out white: with `scene.environment`, `material.envMapIntensity` does nothing —
+  use `scene.environmentIntensity`, and keep direct lights on metal dim (about 0.3).
+- Logo scenes: `SVGLoader` + `ExtrudeGeometry`; set `bevelOffset = -bevelSize` so the bevel does not fatten
+  thin letters. Animated scenes take time from `?time=` / `window.__renderAt(seconds)` so renders are repeatable.
+- The user's logo lives in `assets/logos/tawassl.svg` (channel name: Tawassl; brand colour not yet given,
+  gold `#D4A53A` used as a stand-in).
 - Start the server as a background task with the longest timeout (2 hours). It is stopped when the
   limit runs out; if `shoot.mjs` times out on `page.goto`, the server has died — restart it.
 - Indoor scenes: walls are one-sided (visible from inside only) so the camera can orbit outside;

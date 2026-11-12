@@ -1,0 +1,13 @@
+{
+  "name": "three-scenes",
+  "private": true,
+  "type": "module",
+  "description": "A workshop of small three.js 3D scenes. One folder per scene.",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "shoot": "node tools/shoot.mjs"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  }
+}

@@ -46,8 +46,16 @@ NODE_USE_ENV_PROXY=1 node tools/get-polyhaven.mjs model sofa_03   # also: textur
   use `scene.environmentIntensity`, and keep direct lights on metal dim (about 0.3).
 - Logo scenes: `SVGLoader` + `ExtrudeGeometry`; set `bevelOffset = -bevelSize` so the bevel does not fatten
   thin letters. Animated scenes take time from `?time=` / `window.__renderAt(seconds)` so renders are repeatable.
-- The user's logo lives in `assets/logos/tawassl.svg` (channel name: Tawassl; brand colour not yet given,
-  gold `#D4A53A` used as a stand-in).
+- The user's logo: `assets/logos/tawassl/original.webp` (full colour, transparent background). Brand colours
+  sampled from it: gold `#FDBD03`, charcoal `#272A2E`. Channel name: Tawassl.
+  `python3 tools/logo-from-image.py <picture> <folder>` traces it into `layers.svg` (dark / gold / name parts)
+  plus `color.png`, which the scene paints onto the metal (needs `pip install opencv-python-headless potracer`;
+  potracer's `Bitmap` treats True as empty, so pass the inverted mask).
+- Brand-coloured metal: use `trueColors: true` in `createStage` (neutral tone mapping) and keep reflections
+  low (about 0.35), or yellow turns pale or peach. Charcoal parts need `darkPartsBrightness` to show on black.
+- Sound: `python3 tools/make-intro-sound.py scenes/<scene>/sound.wav` generates original audio (no downloads);
+  `render-video.mjs` adds a scene's `sound.wav` to every video automatically. Claude cannot listen to audio —
+  say so, and check levels with ffmpeg `volumedetect` instead.
 - Start the server as a background task with the longest timeout (2 hours). It is stopped when the
   limit runs out; if `shoot.mjs` times out on `page.goto`, the server has died — restart it.
 - Indoor scenes: walls are one-sided (visible from inside only) so the camera can orbit outside;

@@ -6,6 +6,7 @@
 import { createRequire } from 'node:module';
 import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -48,14 +49,17 @@ for (let i = 0; i < total; i++) {
 }
 await browser.close();
 
-const ff = (args) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps),
-  '-i', path.join(frameDir, '%04d.png'), ...args]);
+// If the scene folder has a sound.wav, it is added to every video.
+const sound = path.join(root, 'scenes', name, 'sound.wav');
+const hasSound = existsSync(sound);
+const ff = (args, audioCodec) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps),
+  '-i', path.join(frameDir, '%04d.png'), ...(hasSound ? ['-i', sound, ...audioCodec, '-shortest'] : []), ...args]);
 if (transparent) {
   // ProRes 4444 .mov: the see-through format video editors (Premiere, Final Cut, DaVinci, CapCut) accept.
-  ff(['-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le', '-r', String(fps), path.join(outDir, `${name}-transparent.mov`)]);
+  ff(['-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le', '-r', String(fps), path.join(outDir, `${name}-transparent.mov`)], ['-c:a', 'pcm_s16le']);
   // WebM with transparency: small file, for web and some editors.
-  ff(['-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-b:v', '0', '-crf', '24', '-r', String(fps), path.join(outDir, `${name}-transparent.webm`)]);
+  ff(['-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-b:v', '0', '-crf', '24', '-r', String(fps), path.join(outDir, `${name}-transparent.webm`)], ['-c:a', 'libopus', '-b:a', '160k']);
 } else {
-  ff(['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '14', '-preset', 'slow', '-r', String(fps), '-movflags', '+faststart', path.join(outDir, `${name}.mp4`)]);
+  ff(['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '14', '-preset', 'slow', '-r', String(fps), '-movflags', '+faststart', path.join(outDir, `${name}.mp4`)], ['-c:a', 'aac', '-b:a', '256k']);
 }
 console.log('done ->', path.relative(root, outDir));

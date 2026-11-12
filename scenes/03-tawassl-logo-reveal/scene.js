@@ -1,22 +1,24 @@
 // Scene 03 — Tawassl Logo Reveal (4-second video intro)
 // The logo rises out of darkness, turns to face the camera, a light sweeps across it,
 // and the channel name appears below.
+// The 3D shapes and colours come from the logo picture (see tools/logo-from-image.py).
 import { createStage } from '/lib/stage.js';
 import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // ───────── THINGS YOU CAN CHANGE ─────────
 const SETTINGS = {
-  brandColor: '#D4A53A',     // the metal colour of the logo
-  logoFile: '/assets/logos/tawassl.svg',
-  thickness: 0.32,           // how deep the 3D logo is
-  bevel: 0.035,              // how rounded the edges are (0 = sharp)
-  shine: 0.4,                // 0.15 = mirror-like, 0.6 = dull
+  logoFolder: '/assets/logos/tawassl',
+  goldThickness: 0.46,       // how deep the gold parts are
+  darkThickness: 0.28,       // how deep the charcoal parts are (thinner, so gold stands in front)
+  bevel: 0.03,               // how rounded the edges are (0 = sharp)
+  shine: 0.38,               // 0.15 = mirror-like, 0.6 = dull
   brushed: 0.5,              // strength of the brushed-metal streaks (0 = smooth)
-  reflections: 0.55,         // how strongly the metal reflects the studio lights
-  keyLight: 0.3,             // the main lamp shining on the front (higher = brighter highlight)
-  sweepBrightness: 0.6,      // the light that slides across the logo
-  backdropGlow: '#2a1e0c',   // soft glow behind the logo (not used in the transparent version)
+  reflections: 0.36,         // how strongly the metal reflects the studio lights
+  keyLight: 0.18,            // the main lamp shining on the front (higher = brighter highlight)
+  darkPartsBrightness: 5.0,  // 1 = true charcoal (hard to see on black); higher = lighter steel
+  sweepBrightness: 0.55,     // the light that slides across the logo
+  backdropGlow: '#40382a',   // soft glow behind the logo (not used in the transparent version)
   // Timing, in seconds (the whole intro is 4 seconds)
   riseStart: 0.15, riseEnd: 2.3,
   sweepStart: 2.2, sweepEnd: 3.25,
@@ -32,13 +34,14 @@ const { THREE, scene, camera, renderer, controls, start } = createStage({
   cameraPosition: [0, 0, 14.5],
   lookAt: [0, 0, 0],
   fieldOfView: 30,
+  trueColors: true,
   transparent,
 });
 
 // Soft studio lighting for the metal to reflect (big gentle panels, no hard spots).
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.08).texture;
-const key = new THREE.DirectionalLight('#fff1dc', 1);
+const key = new THREE.DirectionalLight('#fff4e6', 1);
 key.position.set(-4, 5, 8);
 scene.add(key);
 
@@ -48,7 +51,7 @@ if (!transparent) {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 288;
   const g = c.getContext('2d');
-  const glow = g.createRadialGradient(256, 150, 0, 256, 150, 300);
+  const glow = g.createRadialGradient(256, 144, 0, 256, 144, 300);
   glow.addColorStop(0, SETTINGS.backdropGlow); glow.addColorStop(1, '#000000');
   g.fillStyle = glow; g.fillRect(0, 0, c.width, c.height);
   const texture = new THREE.CanvasTexture(c);
@@ -77,22 +80,29 @@ function brushedTexture() {
   }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(5, 3.3);
   t.anisotropy = 8;
   return t;
 }
 const streaks = brushedTexture();
 
+// The logo's own colours, painted onto the metal.
+const colours = await new THREE.TextureLoader().loadAsync(`${SETTINGS.logoFolder}/color.png`);
+colours.colorSpace = THREE.SRGBColorSpace;
+colours.anisotropy = 8;
+
 const sweep = { value: -99 };
-function metal() {
+function metal(brightness = 1) {
   const m = new THREE.MeshPhysicalMaterial({
-    color: SETTINGS.brandColor, metalness: 1, roughness: SETTINGS.shine,
+    map: colours, color: new THREE.Color(brightness, brightness, brightness * 1.04),
+    metalness: 1, roughness: SETTINGS.shine,
     roughnessMap: streaks, bumpMap: streaks, bumpScale: SETTINGS.brushed * 0.6,
     anisotropy: SETTINGS.brushed,
   });
   // The light sweep: a soft diagonal band of light that travels across the front of the logo.
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uSweep = sweep;
-    shader.uniforms.uSweepColor = { value: new THREE.Color(SETTINGS.brandColor).lerp(new THREE.Color('#ffffff'), 0.75) };
+    shader.uniforms.uSweepColor = { value: new THREE.Color('#fff3d0') };
     shader.uniforms.uSweepPower = { value: SETTINGS.sweepBrightness };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vSweepPos;')
@@ -106,49 +116,54 @@ function metal() {
   };
   return m;
 }
-const logoMetal = metal();
-const nameMetal = metal();
-nameMetal.transparent = true;
+const see = (m) => { m.transparent = true; return m; };
+const materials = {
+  gold: metal(), dark: metal(SETTINGS.darkPartsBrightness),
+  'name-gold': see(metal()), 'name-dark': see(metal(SETTINGS.darkPartsBrightness)),
+};
 
-// ── Turn the flat SVG drawing into solid 3D pieces ──
-const svg = await new SVGLoader().loadAsync(SETTINGS.logoFile);
-const pieces = [];
+// ── Turn the flat logo outlines into solid 3D pieces ──
+const svg = await new SVGLoader().loadAsync(`${SETTINGS.logoFolder}/layers.svg`);
+const { width: W, height: H } = svg.xml.viewBox.baseVal;
+const layers = {};
+const all = new THREE.Box2();
 for (const path of svg.paths) {
-  for (const shape of SVGLoader.createShapes(path)) {
-    const box = new THREE.Box2().setFromPoints(shape.getPoints(8));
-    pieces.push({ shape, box });
-  }
+  const shapes = SVGLoader.createShapes(path);
+  layers[path.userData.node.id] = shapes;
+  for (const shape of shapes) all.union(new THREE.Box2().setFromPoints(shape.getPoints(6)));
 }
-const all = pieces.reduce((b, p) => b.union(p.box), new THREE.Box2());
 const size = all.getSize(new THREE.Vector2()), centre = all.getCenter(new THREE.Vector2());
-const scale = 5.2 / Math.max(size.y, size.x * 0.62); // fit nicely inside a 16:9 frame
-// The small Latin "Tawassl" lettering at the bottom of the logo is the channel name;
-// it is kept separate so it can appear on its own at the end.
-const nameLine = all.min.y + size.y * 0.86;
+const scale = 5.4 / Math.max(size.y, size.x * 0.62); // fit nicely inside a 16:9 frame
+const u = 1 / scale; // picture pixels per scene unit
 
-function build(group, list, material, bevel) {
-  const u = 1 / scale; // SVG units per scene unit
-  for (const { shape } of list) {
+// Every point of the 3D shape takes the colour of the logo picture directly behind it.
+const paint = {
+  generateTopUV: (g, v, a, b, c) => [a, b, c].map((i) => new THREE.Vector2(v[i * 3] / W, 1 - v[i * 3 + 1] / H)),
+  generateSideWallUV: (g, v, a, b, c, d) => [a, b, c, d].map((i) => new THREE.Vector2(v[i * 3] / W, 1 - v[i * 3 + 1] / H)),
+};
+
+function build(id, thickness, bevel) {
+  const group = new THREE.Group();
+  for (const shape of layers[id] || []) {
     const geometry = new THREE.ExtrudeGeometry(shape, {
-      depth: SETTINGS.thickness * u, curveSegments: 10,
+      depth: thickness * u, curveSegments: 8, UVGenerator: paint,
       bevelEnabled: bevel > 0, bevelThickness: bevel * u, bevelSize: bevel * u,
-      bevelOffset: -bevel * u, bevelSegments: 5,
+      bevelOffset: -bevel * u, bevelSegments: 4,
     });
-    // Stretch the brushed streaks to a sensible size across the metal.
-    const uv = geometry.attributes.uv;
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / (2.2 * u), uv.getY(i) / (2.2 * u));
-    group.add(new THREE.Mesh(geometry, material));
+    group.add(new THREE.Mesh(geometry, materials[id]));
   }
-  // SVG drawings are upside-down compared with 3D space, so flip and centre them.
-  group.scale.set(scale, -scale, scale);
-  group.position.set(-centre.x * scale, centre.y * scale, -SETTINGS.thickness / 2);
+  // Pictures are upside-down compared with 3D space, so flip and centre them.
+  // After the flip the extrusion points away from the camera, so shift it to share one back plane.
+  group.scale.set(scale, -scale, -scale);
+  group.position.set(-centre.x * scale, centre.y * scale, thickness - SETTINGS.goldThickness / 2);
+  return group;
 }
-const logo = new THREE.Group(), emblem = new THREE.Group(), name = new THREE.Group();
-build(emblem, pieces.filter((p) => p.box.getCenter(new THREE.Vector2()).y < nameLine), logoMetal, SETTINGS.bevel);
-build(name, pieces.filter((p) => p.box.getCenter(new THREE.Vector2()).y >= nameLine), nameMetal, SETTINGS.bevel * 0.4);
-const nameHolder = new THREE.Group();
-nameHolder.add(name);
-logo.add(emblem, nameHolder);
+const S0 = SETTINGS;
+const logo = new THREE.Group(), nameHolder = new THREE.Group();
+logo.add(build('dark', S0.darkThickness, S0.bevel), build('gold', S0.goldThickness, S0.bevel));
+nameHolder.add(build('name-dark', S0.darkThickness * 0.6, S0.bevel * 0.4),
+  build('name-gold', S0.darkThickness * 0.6, S0.bevel * 0.4));
+logo.add(nameHolder);
 scene.add(logo);
 
 // ── The 4-second animation ──
@@ -177,7 +192,7 @@ function animate(t) {
   const appear = easeOut(progress(t, S.nameStart, S.nameEnd));
   nameHolder.visible = appear > 0;
   nameHolder.position.y = -0.3 * (1 - appear);
-  nameMetal.opacity = appear;
+  materials['name-gold'].opacity = materials['name-dark'].opacity = appear;
 
   // A slow, gentle push-in for the whole 4 seconds
   camera.position.set(0, 0, 14.5 - 0.9 * easeInOut(clamp01(t / 4)));

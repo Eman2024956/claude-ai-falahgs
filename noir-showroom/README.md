@@ -27,6 +27,8 @@ npm run plan
 
 This prints which phrase set which part of the plan, and rewrites `plan/scene-plan.json`. `npm run check` fails if the committed plan is invalid or no longer matches the brief.
 
+An Arabic brief works too: edit `plan/brief.ar.txt`, run `npm run plan:ar`, and open `?plan=scene-plan-ar`. Arabic is read with a dictionary (`planner/lexicon.ar.json`) and audited for unknown words, negation and conflicts; see `GUIDE-AR.md`.
+
 You can also edit the plan by hand, or save another one as `plan/<name>.json` and open `?plan=<name>`.
 
 ## What is in the plan

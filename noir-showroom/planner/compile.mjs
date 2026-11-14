@@ -5,7 +5,8 @@
 //   node planner/compile.mjs --check         fails if the committed plan is stale or invalid
 //   node planner/compile.mjs my-brief.txt out.json
 //
-// The planner is deterministic and rule-based (see rules.mjs). Its only output
+// The planner is deterministic. An English brief is read with the patterns in
+// rules.mjs, an Arabic one with the dictionary in lexicon.ar.json (arabic.mjs). Its only output
 // is data, and that data is validated before it is written.
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -13,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { rules } from './rules.mjs';
 import { content } from './content.mjs';
+import { readArabic } from './arabic.mjs';
 import { validatePlan } from '../plan/validate.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -45,18 +47,18 @@ function basePlan(brief) {
   };
 }
 
-export function compile(brief) {
-  const plan = basePlan(brief.trim());
+// English front end: each rule finds its own phrase with a pattern.
+function readEnglish(brief) {
+  const found = [];
   const covered = [];
   for (const rule of rules) {
     const match = rule.pattern.exec(brief);
     if (!match) continue;
-    rule.apply(plan, match, content);
-    plan.meta.intents.push({ intent: rule.intent, phrase: match[0].replace(/\s+/g, ' '), sets: rule.sets });
+    found.push({ intent: rule.intent, phrase: match[0].replace(/\s+/g, ' '), args: rule.args ? rule.args(match) : {} });
     covered.push([match.index, match.index + match[0].length]);
   }
-
   // Any clause that no rule touched is reported back instead of being invented.
+  const unresolved = [];
   const clause = /[^.,;!?\n]+/g;
   let m;
   while ((m = clause.exec(brief))) {
@@ -64,8 +66,38 @@ export function compile(brief) {
     const to = from + m[0].length;
     const words = m[0].trim().split(/\s+/).length;
     const hit = covered.some(([a, b]) => a < to && b > from);
-    if (!hit && words >= 3) plan.meta.unresolved.push(m[0].trim());
+    if (!hit && words >= 3) unresolved.push(m[0].trim());
   }
+  return { found, unresolved };
+}
+
+export function compile(brief) {
+  const plan = basePlan(brief.trim());
+  const arabic = /[\u0600-\u06FF]/.test(brief);
+  const { found, unresolved } = arabic ? readArabic(brief) : readEnglish(brief);
+
+  // Rules always run in their own order, whatever order the brief used.
+  for (const rule of rules) {
+    const hit = found.find((f) => f.intent === rule.intent);
+    if (!hit) continue;
+    if (hit.negated) {
+      plan.meta.intents.push({ intent: rule.intent, phrase: hit.phrase, sets: [] });
+      continue;
+    }
+    rule.apply(plan, hit.args, content);
+    plan.meta.intents.push({ intent: rule.intent, phrase: hit.phrase, sets: rule.sets });
+  }
+  // A track cannot animate something the scene does not have.
+  if (!plan.scene.particles) plan.timeline.tracks = plan.timeline.tracks.filter((t) => t.target !== 'particles.opacity');
+  // Nor can a button point at a section that is not on the page.
+  const ids = new Set(plan.content.sections.map((section) => section.id));
+  plan.content.sections = plan.content.sections.map((section) => {
+    if (!section.actions) return section;
+    const actions = section.actions.filter((action) => !action.href.startsWith('#') || ids.has(action.href.slice(1)));
+    const { actions: _, ...rest } = section;
+    return actions.length ? { ...rest, actions } : rest;
+  });
+  plan.meta.unresolved = unresolved;
   return plan;
 }
 

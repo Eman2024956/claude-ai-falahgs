@@ -1,0 +1,778 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "ORSEN Nocturne GT",
+    "description": "The ORSEN Nocturne GT. A grand tourer finished in black.",
+    "brief": "أنشئ موقعاً فاخراً لسيارة سوداء. ضع السيارة داخل صالة عرض مظلمة سينمائية بأرضية رخام، مع إضاءة حجمية ناعمة وجزيئات عائمة وكاميرا تدور ببطء حول السيارة. عند التمرير انتقل من الصالة إلى مواصفات المنتج.",
+    "intents": [
+      {
+        "intent": "subject",
+        "phrase": "لسيارة",
+        "sets": [
+          "scene.subject.asset"
+        ]
+      },
+      {
+        "intent": "paint",
+        "phrase": "سوداء",
+        "sets": [
+          "scene.subject.paint.color"
+        ]
+      },
+      {
+        "intent": "tone",
+        "phrase": "فاخراً",
+        "sets": [
+          "theme.accent",
+          "scene.subject.paint",
+          "scene.floor.accentColor",
+          "scene.floor.ring"
+        ]
+      },
+      {
+        "intent": "environment",
+        "phrase": "صالة عرض مظلمة سينمائية",
+        "sets": [
+          "scene.environment",
+          "theme.background",
+          "theme.text",
+          "theme.muted"
+        ]
+      },
+      {
+        "intent": "floor",
+        "phrase": "رخام",
+        "sets": [
+          "scene.floor"
+        ]
+      },
+      {
+        "intent": "lighting",
+        "phrase": "إضاءة حجمية ناعمة",
+        "sets": [
+          "scene.lights"
+        ]
+      },
+      {
+        "intent": "particles",
+        "phrase": "وجزيئات",
+        "sets": [
+          "scene.particles"
+        ]
+      },
+      {
+        "intent": "camera",
+        "phrase": "تدور ببطء",
+        "sets": [
+          "camera.orbit"
+        ]
+      },
+      {
+        "intent": "scroll-driver",
+        "phrase": "التمرير",
+        "sets": [
+          "timeline.driver",
+          "timeline.scrollPages"
+        ]
+      },
+      {
+        "intent": "specifications",
+        "phrase": "مواصفات",
+        "sets": [
+          "timeline.tracks",
+          "content.sections"
+        ]
+      }
+    ],
+    "unresolved": []
+  },
+  "theme": {
+    "background": "#030304",
+    "text": "#f3efe8",
+    "muted": "#9c968c",
+    "accent": "#c8a46a"
+  },
+  "scene": {
+    "environment": {
+      "type": "showroom",
+      "radius": 24,
+      "height": 7.5,
+      "wallColor": "#060608",
+      "fogColor": "#030304",
+      "fogDensity": 0.034,
+      "exposure": 1,
+      "slats": {
+        "count": 44,
+        "color": "#ffe9cf",
+        "intensity": 1.5
+      }
+    },
+    "floor": {
+      "material": "marble",
+      "baseColor": "#0a0a0c",
+      "veinColor": "#8d877e",
+      "accentColor": "#c8a46a",
+      "veinScale": 2.6,
+      "tileSize": 2.4,
+      "reflectivity": 0.62,
+      "roughness": 0.22,
+      "ring": {
+        "radius": 3.7,
+        "color": "#f0d9b0",
+        "intensity": 1.6
+      }
+    },
+    "subject": {
+      "asset": "coupe",
+      "paint": {
+        "color": "#050507",
+        "metalness": 0.9,
+        "roughness": 0.22,
+        "clearcoat": 1
+      },
+      "glassColor": "#07080a",
+      "headlightColor": "#eaf2ff",
+      "taillightColor": "#ff1a22",
+      "rotationY": 0
+    },
+    "lights": [
+      {
+        "id": "fill",
+        "type": "ambient",
+        "color": "#b9c4d6",
+        "intensity": 0.12
+      },
+      {
+        "id": "box-centre",
+        "type": "softbox",
+        "color": "#fff3e2",
+        "intensity": 9,
+        "position": [
+          0,
+          5.6,
+          0
+        ],
+        "size": [
+          8.5,
+          1.1
+        ]
+      },
+      {
+        "id": "box-left",
+        "type": "softbox",
+        "color": "#ffe8cf",
+        "intensity": 6,
+        "position": [
+          0,
+          5.1,
+          3.4
+        ],
+        "size": [
+          9.5,
+          0.55
+        ]
+      },
+      {
+        "id": "box-right",
+        "type": "softbox",
+        "color": "#ffe8cf",
+        "intensity": 6,
+        "position": [
+          0,
+          5.1,
+          -3.4
+        ],
+        "size": [
+          9.5,
+          0.55
+        ]
+      },
+      {
+        "id": "key",
+        "type": "spot",
+        "color": "#ffe6c4",
+        "intensity": 26,
+        "position": [
+          2.6,
+          7,
+          2.2
+        ],
+        "target": [
+          0.6,
+          0,
+          0
+        ],
+        "angle": 17,
+        "beam": {
+          "opacity": 0.34
+        }
+      },
+      {
+        "id": "rim",
+        "type": "spot",
+        "color": "#cfe0ff",
+        "intensity": 18,
+        "position": [
+          -3.4,
+          7,
+          -2.4
+        ],
+        "target": [
+          -0.8,
+          0,
+          0
+        ],
+        "angle": 15,
+        "beam": {
+          "opacity": 0.34
+        }
+      },
+      {
+        "id": "kicker",
+        "type": "spot",
+        "color": "#ffe6c4",
+        "intensity": 12,
+        "position": [
+          -0.5,
+          7,
+          4.2
+        ],
+        "target": [
+          0,
+          0,
+          1.2
+        ],
+        "angle": 12,
+        "beam": {
+          "opacity": 0.34
+        }
+      }
+    ],
+    "particles": {
+      "count": 1400,
+      "color": "#ffe9cc",
+      "size": 0.03,
+      "opacity": 0.75,
+      "bounds": [
+        16,
+        6,
+        16
+      ],
+      "drift": 0.12
+    }
+  },
+  "camera": {
+    "fov": 32,
+    "damping": 0.5,
+    "orbit": {
+      "target": [
+        0,
+        0.75,
+        0
+      ],
+      "radius": 9.4,
+      "elevation": 9,
+      "azimuth": 52,
+      "speed": 4
+    }
+  },
+  "timeline": {
+    "driver": "scroll",
+    "scrollPages": 6.5,
+    "smoothing": 0.22,
+    "tracks": [
+      {
+        "target": "camera.orbit",
+        "keys": [
+          {
+            "at": 0,
+            "value": 1,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.07,
+            "value": 1,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.24,
+            "value": 0,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.86,
+            "value": 0,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 1,
+            "value": 1,
+            "ease": "inOutSine"
+          }
+        ]
+      },
+      {
+        "target": "camera.azimuth",
+        "keys": [
+          {
+            "at": 0,
+            "value": 52,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.07,
+            "value": 52,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 66,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 0,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": -52,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.96,
+            "value": -74,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "camera.elevation",
+        "keys": [
+          {
+            "at": 0,
+            "value": 9,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.07,
+            "value": 9,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 5,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 6,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": 33,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.96,
+            "value": 9,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "camera.radius",
+        "keys": [
+          {
+            "at": 0,
+            "value": 9.4,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.07,
+            "value": 9.4,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 5.6,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 9.3,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": 9.6,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.96,
+            "value": 9.6,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "camera.target.x",
+        "keys": [
+          {
+            "at": 0.07,
+            "value": 0,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 1.1,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 0,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "camera.target.y",
+        "keys": [
+          {
+            "at": 0.07,
+            "value": 0.75,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 0.62,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 0.7,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": 0.5,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.96,
+            "value": -0.35,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "camera.frame",
+        "keys": [
+          {
+            "at": 0,
+            "value": 0.13,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.07,
+            "value": 0.13,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 0.16,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.4,
+            "value": 0,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": -0.19,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.64,
+            "value": 0,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": 0.2,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.88,
+            "value": 0,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "beams.opacity",
+        "keys": [
+          {
+            "at": 0.07,
+            "value": 1,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 0.45,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 0.12,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": 0.2,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.96,
+            "value": 0.8,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "particles.opacity",
+        "keys": [
+          {
+            "at": 0.07,
+            "value": 1,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 0.6,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 0.15,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": 0.2,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.96,
+            "value": 0.9,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "environment.exposure",
+        "keys": [
+          {
+            "at": 0.24,
+            "value": 1,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 0.82,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": 0.9,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.96,
+            "value": 1,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "floor.ring",
+        "keys": [
+          {
+            "at": 0.07,
+            "value": 1,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.28,
+            "value": 0.35,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 0.6,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.96,
+            "value": 1,
+            "ease": "inOutCubic"
+          }
+        ]
+      },
+      {
+        "target": "subject.lamps",
+        "keys": [
+          {
+            "at": 0.24,
+            "value": 1,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.52,
+            "value": 0.4,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.755,
+            "value": 0.7,
+            "ease": "inOutCubic"
+          },
+          {
+            "at": 0.9,
+            "value": 1,
+            "ease": "inOutCubic"
+          }
+        ]
+      }
+    ]
+  },
+  "content": {
+    "brand": "ORSEN",
+    "sections": [
+      {
+        "id": "showroom",
+        "kind": "hero",
+        "range": [
+          0,
+          0.13
+        ],
+        "align": "left",
+        "eyebrow": "The new grand tourer",
+        "heading": "Nocturne GT",
+        "body": "Drawn in one line from nose to tail, and finished in a black that takes eleven coats to reach.",
+        "actions": [
+          {
+            "label": "See the specification",
+            "href": "#performance"
+          }
+        ]
+      },
+      {
+        "id": "design",
+        "kind": "statement",
+        "nav": "Design",
+        "range": [
+          0.2,
+          0.36
+        ],
+        "align": "left",
+        "eyebrow": "Design",
+        "heading": "Light does the drawing",
+        "body": "There is no chrome and no crease that is not needed. The body is one continuous surface, so the only lines you see are the ones the room puts there."
+      },
+      {
+        "id": "performance",
+        "kind": "specs",
+        "nav": "Performance",
+        "range": [
+          0.44,
+          0.6
+        ],
+        "align": "right",
+        "eyebrow": "Performance",
+        "heading": "Twin-motor, all-wheel drive",
+        "stats": [
+          {
+            "label": "0 to 100 km/h",
+            "value": "2.9",
+            "unit": "s"
+          },
+          {
+            "label": "Power",
+            "value": "720",
+            "unit": "PS"
+          },
+          {
+            "label": "Torque",
+            "value": "900",
+            "unit": "Nm"
+          },
+          {
+            "label": "Top speed",
+            "value": "325",
+            "unit": "km/h"
+          }
+        ]
+      },
+      {
+        "id": "dimensions",
+        "kind": "specs",
+        "nav": "Dimensions",
+        "range": [
+          0.68,
+          0.83
+        ],
+        "align": "left",
+        "eyebrow": "Body and chassis",
+        "heading": "Long, low and wide",
+        "stats": [
+          {
+            "label": "Length",
+            "value": "4,800",
+            "unit": "mm"
+          },
+          {
+            "label": "Wheelbase",
+            "value": "2,800",
+            "unit": "mm"
+          },
+          {
+            "label": "Kerb weight",
+            "value": "1,790",
+            "unit": "kg"
+          },
+          {
+            "label": "Drag coefficient",
+            "value": "0.24",
+            "unit": "Cd"
+          }
+        ]
+      },
+      {
+        "id": "commission",
+        "kind": "cta",
+        "nav": "Commission",
+        "range": [
+          0.9,
+          1
+        ],
+        "align": "center",
+        "eyebrow": "Built to order",
+        "heading": "Commission yours",
+        "body": "Each Nocturne GT is specified with its owner. Tell us how you would like yours.",
+        "actions": [
+          {
+            "label": "Request a commission",
+            "href": "mailto:atelier@orsen.example"
+          },
+          {
+            "label": "Back to the showroom",
+            "href": "#showroom"
+          }
+        ]
+      }
+    ]
+  }
+}

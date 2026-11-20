@@ -38,6 +38,7 @@ api('/api/status')
     $('status').textContent = MODE === 'rest' ? `Blueticks REST API · ${new URL(s.server).host}` : `Connected · ${s.tools.length} MCP tools`;
     $('status').className = 'status ok';
     if (MODE === 'rest') applyRestMode();
+    if (s.production) $('sourceLink').hidden = true;
   })
   .catch((e) => { $('status').textContent = 'Not connected: ' + e.message; $('status').className = 'status err'; });
 
@@ -189,7 +190,7 @@ $('previewBtn').onclick = (e) => {
     $('preview').innerHTML = sel.map((c) => {
       const msgs = (data[c.id]?.messages || []).slice().sort((a, b) => (a.time < b.time ? -1 : 1));
       return `<div class="chat"><b>${esc(c.name)}</b> <span class="muted">${esc(c.phone || c.id)} · ${msgs.length} msg</span>
-        ${msgs.map((m) => `<div class="msg ${m.fromMe ? 'me' : ''}"><time>${esc(new Date(m.time).toLocaleString())}</time>
+        ${msgs.map((m) => `<div class="msg ${m.fromMe ? 'me' : ''}" dir="auto"><time>${esc(new Date(m.time).toLocaleString())}</time>
           ${esc(m.fromMe ? 'Me' : (m.sender || c.name))}: ${esc(m.text || `[${m.type}${m.filename ? ': ' + m.filename : ''}]`)}</div>`).join('')
           || '<div class="muted">No messages in this range.</div>'}</div>`;
     }).join('');
@@ -233,6 +234,7 @@ function showTab(name) {
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tabpanel').forEach((p) => { p.hidden = p.id !== `tab-${name}`; });
   if (name === 'send') updateSendTab();
+  if (name === 'history') loadHistory();
   try { localStorage.setItem('tab', name); } catch {}
 }
 document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
@@ -501,6 +503,45 @@ $('dueDate').addEventListener('input', () => {
   $('sendNowBtn').dataset.when = v ? 'schedule' : '';
   updateSendTab();
 });
+
+// =====================================================================
+// HISTORY TAB — every send + delivery reports (Blueticks callbackUrl)
+// =====================================================================
+let histRows = [];
+function statusClass(s = '') {
+  s = s.toLowerCase();
+  if (/(sent|deliver|success|read|done|ok)/.test(s)) return 'ok';
+  if (/(pend|queue|schedul|wait|process)/.test(s)) return 'wait';
+  if (/(fail|error|declin|cancel|invalid)/.test(s)) return 'bad';
+  return '';
+}
+async function loadHistory() {
+  try {
+    const data = await api('/api/history?limit=500&q=' + encodeURIComponent($('histQ').value.trim()));
+    histRows = data.records;
+    $('histNote').textContent = data.callbacks
+      ? 'Delivery reports are on: Blueticks calls this server when a message is sent or fails, and the status updates here.'
+      : 'Delivery reports are off. Set PUBLIC_URL and CALLBACK_SECRET in .env to get “sent / failed” updates from Blueticks. Until then the status stays “pending” as Blueticks returned it.';
+    $('histBody').innerHTML = histRows.length ? histRows.map((r) => `
+      <tr>
+        <td>${esc(new Date(r.createdAt).toLocaleString())}${r.dueDate && new Date(r.dueDate) - new Date(r.createdAt) > 60000 ? `<br><span class="muted">due ${esc(new Date(r.dueDate).toLocaleString())}</span>` : ''}</td>
+        <td>${r.name && r.name !== r.to ? `${esc(r.name)}<br><span class="muted">${esc(r.to)}</span>` : esc(r.to || '')}</td>
+        <td class="msg" dir="auto">${esc((r.text || '').slice(0, 300))}${r.media ? `<br><span class="muted">📎 ${esc(r.media)}</span>` : ''}</td>
+        <td><span class="st ${statusClass(r.status)}">${esc(r.status || '')}</span>${r.error ? `<br><span class="muted">${esc(String(r.error).slice(0, 200))}</span>` : ''}</td>
+        <td>${r.callbackAt ? esc(new Date(r.callbackAt).toLocaleString()) : '<span class="muted">—</span>'}</td>
+        <td><code>${esc(r.messageId || '')}</code></td>
+      </tr>`).join('') : '<tr><td colspan="6" class="muted">No messages yet.</td></tr>';
+  } catch (e) { $('histNote').textContent = 'Error: ' + e.message; }
+}
+$('histRefresh').onclick = loadHistory;
+$('histQ').addEventListener('input', () => { clearTimeout(loadHistory._t); loadHistory._t = setTimeout(loadHistory, 300); });
+$('histCsv').onclick = () => {
+  if (!histRows.length) return toast('No history to export');
+  const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const cols = ['createdAt', 'to', 'name', 'type', 'text', 'media', 'status', 'error', 'dueDate', 'callbackAt', 'messageId'];
+  download('message_history.csv', '\uFEFF' + [cols.join(',')].concat(histRows.map((r) => cols.map((c) => cell(r[c])).join(','))).join('\n'));
+};
+setInterval(() => { if (!$('tab-history').hidden && $('histAuto').checked) loadHistory(); }, 10000);
 
 // ----- init -----
 updateType(); updateMediaSrc(); updateSendTab();

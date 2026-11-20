@@ -1,0 +1,12 @@
+services:
+  whatsapp-sender:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:3000:3000"   # only reachable from this server; put Nginx/Caddy in front for HTTPS
+    volumes:
+      - ./data:/app/data        # keeps message history across restarts

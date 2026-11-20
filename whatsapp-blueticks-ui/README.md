@@ -1,5 +1,22 @@
 # WhatsApp Number Selector (Blueticks REST API + MCP)
 
+> 🇮🇶 **The full production guide in Arabic is in [README.ar.md](README.ar.md).**
+
+## Production quick start
+```bash
+cp .env.example .env   # set BLUETICKS_API_KEY (production key), APP_PASSWORD, PUBLIC_URL, CALLBACK_SECRET
+docker compose up -d --build                     # or: npm ci --omit=dev && pm2 start ecosystem.config.cjs
+```
+Then put Nginx and HTTPS in front (`deploy/nginx.conf`, `certbot --nginx`). Production features:
+- **Password:** required in production.
+- **Delivery reports:** the `callbackUrl` is added automatically, and the **History & Delivery** tab shows each message's status.
+- **Rate limits:** per-minute request limit, maximum recipients per send, and a minimum delay between messages.
+- **Security headers:** CSP and others.
+- **Health check:** `/healthz`.
+- **Graceful shutdown.**
+- **Source download:** disabled in production.
+
+
 A Node.js web app that connects to the **Blueticks WhatsApp MCP server** as an MCP client and gives you a UI to:
 
 1. **Load** your WhatsApp chats or contacts.

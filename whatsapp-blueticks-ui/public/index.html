@@ -10,12 +10,13 @@
   <header class="topbar">
     <div class="brand"><span class="dot"></span> WhatsApp Number Selector <small>via Blueticks</small></div>
     <div class="status" id="status">Connecting…</div>
-    <a class="btn ghost" href="/api/source.zip">⬇ Download source code (.zip)</a>
+    <a class="btn ghost" id="sourceLink" href="/api/source.zip">⬇ Download source code (.zip)</a>
   </header>
 
   <nav class="tabs" role="tablist">
     <button class="tab active" role="tab" data-tab="select">① Select &amp; Export</button>
     <button class="tab" role="tab" data-tab="send">② Send Message <span class="badge" id="tabSelCount">0</span></button>
+    <button class="tab" role="tab" data-tab="history">③ History &amp; Delivery</button>
   </nav>
 
   <div class="banner" id="restBanner" hidden>
@@ -148,7 +149,7 @@
 
       <div data-type="text media">
         <label><span id="textLabel">Message text</span>
-          <textarea id="msgText" rows="5" placeholder="Hello {name} 👋&#10;Tokens: {name} {phone}"></textarea>
+          <textarea id="msgText" dir="auto" rows="5" placeholder="Hello {name} 👋&#10;Tokens: {name} {phone}"></textarea>
         </label>
         <div class="row tokens">
           <button class="btn mini" data-token="{name}">+ {name}</button>
@@ -205,13 +206,35 @@
       <div class="row">
         <label>Delay between messages (s) <input type="number" id="sendDelay" value="3" min="1" max="120" class="small" /></label>
       </div>
-      <div class="bubble-wrap"><div class="muted">Preview for first recipient:</div><div class="bubble" id="bubble">…</div></div>
+      <div class="bubble-wrap"><div class="muted">Preview for first recipient:</div><div class="bubble" id="bubble" dir="auto">…</div></div>
       <div class="row">
         <button class="btn danger" id="sendNowBtn">Send now</button>
         <button class="btn" id="stopBtn" hidden>■ Stop</button>
       </div>
       <div class="progress" hidden id="progWrap"><div id="progBar"></div></div>
       <pre class="log" id="sendLog"></pre>
+    </section>
+  </main>
+
+  <!-- ================= HISTORY TAB ================= -->
+  <main class="tabpanel wide-panel" id="tab-history" hidden>
+    <section class="panel">
+      <div class="row between">
+        <h2>Sent messages</h2>
+        <div class="row">
+          <input type="search" id="histQ" placeholder="Search number, text, id, status…" />
+          <label class="check"><input type="checkbox" id="histAuto" checked /> Auto-refresh</label>
+          <button class="btn" id="histRefresh">Refresh</button>
+          <button class="btn" id="histCsv">Download CSV</button>
+        </div>
+      </div>
+      <p class="muted" id="histNote"></p>
+      <div class="tablewrap">
+        <table class="hist">
+          <thead><tr><th>Time</th><th>To</th><th>Message</th><th>Status</th><th>Delivery report</th><th>Message id</th></tr></thead>
+          <tbody id="histBody"><tr><td colspan="6" class="muted">No messages yet.</td></tr></tbody>
+        </table>
+      </div>
     </section>
   </main>
 

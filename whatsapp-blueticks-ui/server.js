@@ -6,6 +6,30 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { callTool, listTools, explainError } from './src/mcpClient.js';
 import { sendRest } from './src/restClient.js';
+import { addRecord, applyCallback, listRecords } from './src/history.js';
+import { basicAuth, securityHeaders, rateLimit } from './src/security.js';
+import crypto from 'node:crypto';
+
+// ---------- production config ----------
+const IS_PROD = process.env.NODE_ENV === 'production';
+const APP_USER = process.env.APP_USERNAME || 'admin';
+const APP_PASSWORD = process.env.APP_PASSWORD || '';
+const PUBLIC_URL = (process.env.PUBLIC_URL || '').replace(/\/$/, '');          // e.g. https://wa.example.com
+const CALLBACK_SECRET = process.env.CALLBACK_SECRET || '';                       // random string in the callback URL
+const MAX_RECIPIENTS = Number(process.env.MAX_RECIPIENTS_PER_SEND) || 500;
+const MIN_DELAY_MS = (Number(process.env.MIN_DELAY_SECONDS) || 2) * 1000;
+
+const problems = [];
+if (!process.env.BLUETICKS_API_KEY) problems.push('BLUETICKS_API_KEY is missing');
+if (IS_PROD && !APP_PASSWORD) problems.push('APP_PASSWORD is required in production (protects the UI)');
+if (IS_PROD && APP_PASSWORD && APP_PASSWORD.length < 10) problems.push('APP_PASSWORD must be at least 10 characters');
+if (PUBLIC_URL && !/^https:\/\//.test(PUBLIC_URL)) problems.push('PUBLIC_URL must start with https://');
+if (PUBLIC_URL && CALLBACK_SECRET.length < 16) problems.push('CALLBACK_SECRET (16+ random characters) is required when PUBLIC_URL is set');
+if (problems.length) {
+  console.error('\n❌ Configuration problems:\n  - ' + problems.join('\n  - ') + '\nSee .env.example\n');
+  if (IS_PROD) process.exit(1);
+}
+const CALLBACK_URL = PUBLIC_URL && CALLBACK_SECRET ? `${PUBLIC_URL}/api/callback/${CALLBACK_SECRET}` : '';
 
 // Which Blueticks API to use:
 //   rest -> REST API  (POST api.blueticks.co/messages, apiKey in the body). Sends only: text, media URL, schedule.
@@ -23,8 +47,26 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1)); // behind Nginx / Caddy / a load balancer
+app.use(securityHeaders);
+
+// Health check and Blueticks callbacks stay public; everything else needs the password.
+app.get('/healthz', (_req, res) => res.json({ ok: true, mode: MODE, uptime: Math.round(process.uptime()) }));
+app.post('/api/callback/:secret', express.json({ limit: '1mb' }), express.urlencoded({ extended: true }), (req, res) => {
+  const ok = CALLBACK_SECRET && req.params.secret.length === CALLBACK_SECRET.length
+    && crypto.timingSafeEqual(Buffer.from(req.params.secret), Buffer.from(CALLBACK_SECRET));
+  if (!ok) return res.status(404).end();
+  const { matched, record } = applyCallback(req.body);
+  console.log(`[callback] ${record.messageId || '?'} → ${record.status}${matched ? '' : ' (unknown id)'}`);
+  res.json({ ok: true });
+});
+
+app.use(basicAuth({ user: APP_USER, password: APP_PASSWORD }));
 app.use(express.json({ limit: '25mb' })); // large enough for media uploads (base64)
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: IS_PROD ? '1h' : 0 }));
+app.use('/api/send', rateLimit({ windowMs: 60_000, max: Number(process.env.SEND_REQUESTS_PER_MINUTE) || 10 }));
+app.use('/api', rateLimit({ windowMs: 60_000, max: 300 }));
 
 const wrap = (fn) => (req, res) => fn(req, res).catch((err) => {
   console.error(err);
@@ -38,7 +80,7 @@ const MAX_CHATS_PER_REQUEST = 25; // Blueticks list_messages batch limit
 app.get('/api/config', (_req, res) => res.json({ mode: MODE }));
 
 app.get('/api/status', wrap(async (_req, res) => {
-  if (MODE === 'rest') return res.json({ connected: true, mode: 'rest', server: process.env.BLUETICKS_REST_URL || 'https://api.blueticks.co', tools: [], note: 'REST API mode: the key is checked on the first send.' });
+  if (MODE === 'rest') return res.json({ connected: true, mode: 'rest', server: process.env.BLUETICKS_REST_URL || 'https://api.blueticks.co', callbacks: !!CALLBACK_URL, production: IS_PROD, tools: [], note: 'REST API mode: the key is checked on the first send.' });
   const tools = await listTools();
   let engine = null;
   try { engine = await callTool('engine', { action: 'status' }); } catch { /* optional */ }
@@ -189,6 +231,7 @@ app.post('/api/send', wrap(async (req, res) => {
   const seen = new Set();
   const list = recipients.filter((r) => r?.id && /@(c\.us|g\.us|newsletter)$/.test(r.id) && !seen.has(r.id) && seen.add(r.id));
   if (!list.length) return res.status(400).json({ error: 'No valid recipients' });
+  if (list.length > MAX_RECIPIENTS) return res.status(400).json({ error: `Too many recipients (${list.length}). The limit is ${MAX_RECIPIENTS} per send (MAX_RECIPIENTS_PER_SEND).` });
   try { buildSendArgs(type, list[0], { text, media, poll }); } catch (err) { return res.status(400).json({ error: err.message }); }
   if (MODE === 'rest') {
     if (type === 'poll') return res.status(400).json({ error: 'Polls are not supported by the Blueticks REST API.' });
@@ -216,7 +259,7 @@ app.post('/api/send', wrap(async (req, res) => {
           to: r.id,
           message: fill(text, r),
           asset: type === 'media' ? { url: media.url, type: media.mime_type || guessMime(media.url, media.kind) } : undefined,
-          dueDate, callbackUrl,
+          dueDate, callbackUrl: callbackUrl || CALLBACK_URL || undefined,
         });
       } else {
         const args = buildSendArgs(type, r, { text, media, poll });
@@ -224,12 +267,18 @@ app.post('/api/send', wrap(async (req, res) => {
         data = await callTool('chats_write', args);
       }
       sent++;
+      addRecord({
+        messageId: data?.messageId || data?.id || undefined, to: phoneFromChatId(r.id) || r.id, name: r.name,
+        type, text: type === 'poll' ? poll?.question : fill(text, r), media: media?.url || media?.filename,
+        status: data?.status || 'sent', dueDate: data?.dueDate || dueDate, api: MODE, server: data?.server,
+      });
       emit({ event: 'result', index: i, id: r.id, name: r.name, ok: true, data });
     } catch (err) {
       failed++;
+      addRecord({ to: phoneFromChatId(r.id) || r.id, name: r.name, type, text: fill(text, r), status: 'error', error: explainError(err), api: MODE });
       emit({ event: 'result', index: i, id: r.id, name: r.name, ok: false, error: explainError(err) });
     }
-    if (i < list.length - 1 && !aborted) await sleep(Math.max(1000, Number(delayMs) || 0));
+    if (i < list.length - 1 && !aborted) await sleep(Math.max(MIN_DELAY_MS, Number(delayMs) || 0));
   }
   emit({ event: 'done', sent, failed, total: list.length, stopped: aborted });
   res.end();
@@ -303,8 +352,16 @@ app.post('/api/export', wrap(async (req, res) => {
   await zip.finalize();
 }));
 
+// ---------- message history (with delivery reports from callbacks) ----------
+app.get('/api/history', (req, res) => {
+  res.json({ callbacks: !!CALLBACK_URL, records: listRecords({ limit: Math.min(Number(req.query.limit) || 200, 2000), q: req.query.q || '' }) });
+});
+
 // ---------- download this project's source code as a ZIP ----------
-app.get('/api/source.zip', (_req, res) => {
+app.get('/api/source.zip', (req, res, next) => {
+  if (IS_PROD && process.env.ALLOW_SOURCE_DOWNLOAD !== 'true') return res.status(404).json({ error: 'Disabled in production' });
+  next();
+}, (_req, res) => {
   res.setHeader('Content-Type', 'application/zip');
   res.setHeader('Content-Disposition', 'attachment; filename="whatsapp-blueticks-ui.zip"');
   const zip = archiver('zip', { zlib: { level: 9 } });
@@ -314,4 +371,11 @@ app.get('/api/source.zip', (_req, res) => {
 });
 
 const PORT = Number(process.env.PORT) || 3000;
-app.listen(PORT, () => console.log(`WhatsApp Blueticks UI → http://localhost:${PORT}  (Blueticks ${MODE.toUpperCase()} API)`));
+const HOST = process.env.HOST || (IS_PROD ? '127.0.0.1' : '0.0.0.0'); // in production, expose only via the reverse proxy
+const server = app.listen(PORT, HOST, () => {
+  console.log(`WhatsApp Blueticks UI → http://${HOST}:${PORT}  (Blueticks ${MODE.toUpperCase()} API${IS_PROD ? ', production' : ''})`);
+  console.log(`  password: ${APP_PASSWORD ? 'on' : 'OFF (set APP_PASSWORD)'} · delivery callbacks: ${CALLBACK_URL ? 'on' : 'off (set PUBLIC_URL + CALLBACK_SECRET)'}`);
+});
+const shutdown = (sig) => { console.log(`${sig} received, shutting down…`); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 10_000).unref(); };
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

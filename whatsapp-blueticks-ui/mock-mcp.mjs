@@ -40,6 +40,8 @@ app.post('/messages', (req, res) => {
   if (!apiKey) return res.status(401).json({ name: 'NotAuthenticated', message: 'Not authenticated', code: 401 });
   if (apiKey !== 'test-key') return res.status(401).json({ name: 'NotAuthenticated', message: 'Invalid API key', code: 401 });
   console.log('REST', to, message, asset ? JSON.stringify(asset) : '', dueDate || '', callbackUrl || '');
-  res.json({ status: true, message: 'Message queued successfuly', callbackUrl: callbackUrl || 'Not supplied' });
+  const _id = Math.random().toString(16).slice(2).padEnd(24, '0').slice(0, 24);
+  res.status(201).json({ status: true, message: 'Message queued successfuly', callbackUrl: callbackUrl || 'Not supplied',
+    userMessage: { _id, status: 'pending', message, dueDate: dueDate || new Date().toISOString(), contactList: [{ id: to.replace('+', '') + '@c.us', mobile: to }] } });
 });
 app.listen(4100, () => console.log('mock MCP on :4100'));

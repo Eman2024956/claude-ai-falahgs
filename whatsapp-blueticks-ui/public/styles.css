@@ -93,3 +93,19 @@ code{font-size:12px}
 .progress div{height:100%;width:0;background:var(--green);transition:width .3s}
 .banner{max-width:1368px;margin:12px auto 0;padding:10px 14px;border:1px solid var(--line);border-left:4px solid #e0a100;background:var(--panel);border-radius:8px;font-size:13px}
 @media (max-width:1400px){.banner{margin:12px 16px 0}}
+
+/* history */
+.wide-panel{max-width:1400px;margin:0 auto;padding:16px}
+.tabs + .banner + .layout, .tabs ~ .wide-panel{padding-top:0}
+.row.between{justify-content:space-between}
+.row.between h2{margin:0}
+.row input[type=search]{width:260px}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:70vh}
+table.hist{width:100%;border-collapse:collapse;font-size:13px}
+.hist th{position:sticky;top:0;background:var(--panel);text-align:left;font-size:12px;color:var(--muted);font-weight:600}
+.hist th,.hist td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.hist td.msg{max-width:360px;overflow-wrap:anywhere}
+.hist td code{font-size:11px}
+.st{display:inline-block;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600;background:var(--soft)}
+.st.ok{background:#d6f5e3;color:#11683a}.st.wait{background:#fff1cc;color:#7a5600}.st.bad{background:#fde0dc;color:#9b2316}
+@media (prefers-color-scheme: dark){.st.ok{background:#12422a;color:#8fe3b0}.st.wait{background:#4a3a0c;color:#ffd67a}.st.bad{background:#4d1a14;color:#ffaa9e}}

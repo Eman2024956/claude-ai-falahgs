@@ -7,7 +7,13 @@ A Node.js web app that connects to the **Blueticks WhatsApp MCP server** as an M
 3. **Select** numbers with checkboxes or "select all visible". Copy the selection or download it as a CSV.
 4. **Preview** messages of the selected chats in a date range.
 5. **Export a ZIP** with `selected_numbers.csv` and, for each chat, `messages.json`, `messages.txt` and `messages.csv` (media files optional).
-6. **Send** a text to the selected chats with `{name}` / `{phone}` tokens and a delay between sends.
+6. **Send Message tab**: send **any message** (text, image, video, audio, document, or poll):
+   - to **one number** (type it, or pick a loaded contact),
+   - to the **selected** numbers,
+   - to **all filtered** numbers,
+   - or to **all loaded** numbers.
+
+   `{name}` / `{phone}` are filled in for each person. You get a live preview bubble, a delay between messages, a live progress bar with a ✔/✖ line per chat, and a **Stop** button.
 7. **Download the source code** of this app as a ZIP (`/api/source.zip`).
 
 ## Setup
@@ -43,7 +49,7 @@ Browser UI (public/)  ──REST──▶  Express (server.js)  ──MCP (Strea
 | `GET /api/chats` | `chats_read` → `list` / `search` (paged, `kinds`, `since`) |
 | `GET /api/contacts` | `contacts` → `list` (cursor paging) |
 | `POST /api/messages` | `chats_read` → `list_messages` with `chat_ids` (25 chats per batch) |
-| `POST /api/send` | `chats_write` → `send_message_text` |
+| `POST /api/send` | `chats_write` → `send_message_text` / `send_message_media` / `send_message_poll` (progress streamed as NDJSON) |
 | `POST /api/export` | `list_messages` (+ `get_media`) → streamed ZIP (archiver) |
 | `GET /api/status` | `listTools` |
 
@@ -54,7 +60,7 @@ server.js            Express API, ZIP export, source download
 src/mcpClient.js     MCP client (connect, callTool, parse results)
 src/normalize.js     Turns Blueticks rows into stable chat/contact/message objects
 public/index.html    UI
-public/app.js        Filtering, selection, preview, export, send
+public/app.js        Filtering, selection, preview, export, Send Message tab
 public/styles.css    Styles (light and dark)
 mock-mcp.mjs         Local mock of the Blueticks MCP server for testing
 ```
@@ -63,3 +69,17 @@ mock-mcp.mjs         Local mock of the Blueticks MCP server for testing
 
 - **Send** goes out right away. The UI asks you to confirm first. Only message people who agreed to hear from you, so your number does not get banned.
 - Keep `.env` private. It is in `.gitignore`.
+
+## `POST /api/send` body
+
+```json
+{
+  "recipients": [{ "id": "9647701234567@c.us", "name": "Ali", "phone": "+9647701234567" }],
+  "type": "text | media | poll",
+  "text": "Hello {name}",
+  "media": { "data_base64": "...", "mime_type": "image/png", "filename": "a.png", "kind": "image" },
+  "poll":  { "question": "Best day?", "options": ["Mon", "Tue"], "allow_multiple": false },
+  "delayMs": 3000
+}
+```
+For `media`, you can send `"url": "https://..."` in place of `data_base64`. When the type is `media`, `text` is used as the caption.

@@ -25,7 +25,7 @@ function build() {
     return json({ error: 'unsupported' });
   });
   s.registerTool('contacts', { inputSchema: z.object(anyArgs).passthrough() }, async () => json({ contacts: chats.filter((c) => c.id.endsWith('@c.us')) }));
-  s.registerTool('chats_write', { inputSchema: z.object(anyArgs).passthrough() }, async (a) => { console.log('SEND', a.chat_id, a.text); return json({ ok: true, id: 'msg_' + Date.now() }); });
+  s.registerTool('chats_write', { inputSchema: z.object(anyArgs).passthrough() }, async (a) => { console.log('SEND', a.action, a.chat_id, a.text || a.media?.caption || a.poll?.question, a.media ? `[${a.media.mime_type || a.media.url} ${(a.media.data_base64 || '').length}b64]` : '', a.poll ? a.poll.options.join('|') : ''); return json({ ok: true, id: 'msg_' + Date.now() }); });
   return s;
 }
 const app = express(); app.use(express.json());

@@ -13,7 +13,12 @@
     <a class="btn ghost" href="/api/source.zip">⬇ Download source code (.zip)</a>
   </header>
 
-  <main class="layout">
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-tab="select">① Select &amp; Export</button>
+    <button class="tab" role="tab" data-tab="send">② Send Message <span class="badge" id="tabSelCount">0</span></button>
+  </nav>
+
+  <main class="layout tabpanel" id="tab-select">
     <!-- LEFT: filters + list -->
     <section class="panel">
       <h2>1 · Load & filter numbers</h2>
@@ -99,12 +104,98 @@
       <p class="muted">ZIP contains <code>selected_numbers.csv</code> and, for every chat, <code>messages.json / .txt / .csv</code> (+ media).</p>
 
       <h2>5 · Send a message</h2>
-      <textarea id="sendText" rows="3" placeholder="Hello {name}! Tokens: {name} {phone}"></textarea>
-      <div class="row">
-        <label>Delay between sends (s) <input type="number" id="delay" value="3" min="1" max="60" class="small" /></label>
-        <button class="btn danger" id="sendBtn">Send to selected</button>
+      <button class="btn primary wide" data-goto="send">✉ Open the Send Message tab</button>
+    </section>
+  </main>
+
+  <!-- ================= SEND MESSAGE TAB ================= -->
+  <main class="layout tabpanel" id="tab-send" hidden>
+    <section class="panel">
+      <h2>1 · Who gets the message?</h2>
+      <div class="seg" id="modeSeg">
+        <label><input type="radio" name="mode" value="one" checked /> <span>One number</span></label>
+        <label><input type="radio" name="mode" value="selected" /> <span>Selected (<b id="cntSelected">0</b>)</span></label>
+        <label><input type="radio" name="mode" value="visible" /> <span>All filtered (<b id="cntVisible">0</b>)</span></label>
+        <label><input type="radio" name="mode" value="all" /> <span>All loaded (<b id="cntAll">0</b>)</span></label>
       </div>
-      <pre class="log" id="log"></pre>
+
+      <div id="oneBox">
+        <label>Phone number or contact name
+          <input type="text" id="oneTo" list="oneList" placeholder="+964 770 123 4567 or start typing a name" autocomplete="off" />
+          <datalist id="oneList"></datalist>
+        </label>
+        <p class="muted" id="oneResolved">Type a number with its country code, or pick a loaded contact.</p>
+      </div>
+      <p class="muted" id="modeHint" hidden></p>
+
+      <h3 class="sub">Recipients <span class="muted" id="recipCount">0</span></h3>
+      <div class="chips" id="recipChips"><span class="muted">No recipients.</span></div>
+      <p class="muted">To use “Selected / All” first load numbers in the <a href="#" data-goto="select">Select &amp; Export</a> tab.</p>
+    </section>
+
+    <section class="panel">
+      <h2>2 · Message</h2>
+      <div class="seg" id="typeSeg">
+        <label><input type="radio" name="mtype" value="text" checked /> <span>💬 Text</span></label>
+        <label><input type="radio" name="mtype" value="media" /> <span>📎 Image / Video / File / Audio</span></label>
+        <label><input type="radio" name="mtype" value="poll" /> <span>📊 Poll</span></label>
+      </div>
+
+      <div data-type="text media">
+        <label><span id="textLabel">Message text</span>
+          <textarea id="msgText" rows="5" placeholder="Hello {name} 👋&#10;Tokens: {name} {phone}"></textarea>
+        </label>
+        <div class="row tokens">
+          <button class="btn mini" data-token="{name}">+ {name}</button>
+          <button class="btn mini" data-token="{phone}">+ {phone}</button>
+          <span class="muted" id="charCount">0 chars</span>
+        </div>
+      </div>
+
+      <div data-type="media" hidden>
+        <div class="seg small" id="mediaSrcSeg">
+          <label><input type="radio" name="msrc" value="file" checked /> <span>Upload file</span></label>
+          <label><input type="radio" name="msrc" value="url" /> <span>Public URL</span></label>
+        </div>
+        <div id="fileBox">
+          <input type="file" id="mediaFile" />
+          <p class="muted" id="fileInfo">Max ~16 MB. Images, videos, PDF, documents, audio.</p>
+          <img id="filePreview" class="thumb" alt="" hidden />
+        </div>
+        <div id="urlBox" hidden>
+          <input type="url" id="mediaUrl" placeholder="https://example.com/photo.jpg" />
+        </div>
+        <label>Send as
+          <select id="mediaKind">
+            <option value="">Auto-detect</option>
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+            <option value="audio">Audio</option>
+            <option value="document">Document (file)</option>
+          </select>
+        </label>
+      </div>
+
+      <div data-type="poll" hidden>
+        <label>Question <input type="text" id="pollQ" placeholder="Which day works for you, {name}?" /></label>
+        <div id="pollOpts"></div>
+        <div class="row">
+          <button class="btn mini" id="addOpt">+ Add option</button>
+          <label class="check"><input type="checkbox" id="pollMulti" /> Allow multiple answers</label>
+        </div>
+      </div>
+
+      <h2>3 · Send</h2>
+      <div class="row">
+        <label>Delay between messages (s) <input type="number" id="sendDelay" value="3" min="1" max="120" class="small" /></label>
+      </div>
+      <div class="bubble-wrap"><div class="muted">Preview for first recipient:</div><div class="bubble" id="bubble">…</div></div>
+      <div class="row">
+        <button class="btn danger" id="sendNowBtn">Send now</button>
+        <button class="btn" id="stopBtn" hidden>■ Stop</button>
+      </div>
+      <div class="progress" hidden id="progWrap"><div id="progBar"></div></div>
+      <pre class="log" id="sendLog"></pre>
     </section>
   </main>
 

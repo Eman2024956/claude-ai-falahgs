@@ -122,6 +122,7 @@ function render() {
   $('selectAll').checked = allSel;
   $('counts').textContent = `${vis.length} shown · ${state.selected.size} selected`;
   renderChips();
+  if (typeof updateSendTab === 'function') updateSendTab();
 }
 
 function renderChips() {
@@ -214,20 +215,250 @@ $('exportBtn').onclick = (e) => {
   });
 };
 
-// ---------- send ----------
-$('sendBtn').onclick = (e) => {
-  if (!requireSelection()) return;
-  const text = $('sendText').value.trim();
-  if (!text) return toast('Write a message first');
-  const n = state.selected.size;
-  if (!confirm(`Send this message NOW to ${n} chat(s)?\n\n${text}`)) return;
-  busy(e.target, async () => {
-    $('log').textContent = `Sending to ${n} chat(s)…\n`;
-    const data = await api('/api/send', {
-      method: 'POST',
-      body: JSON.stringify({ recipients: selectedList(), text, delayMs: (Number($('delay').value) || 3) * 1000 }),
-    });
-    $('log').textContent += data.results.map((r) => `${r.ok ? '✔' : '✖'} ${r.id}${r.ok ? '' : ' — ' + r.error}`).join('\n');
-    $('log').textContent += `\n\nDone: ${data.sent} sent, ${data.failed} failed.`;
-  });
+// =====================================================================
+// SEND MESSAGE TAB — send text / media / poll to one, selected or all
+// =====================================================================
+const radio = (name) => document.querySelector(`input[name="${name}"]:checked`).value;
+let media = null;            // { data_base64, mime_type, filename } from an uploaded file
+let sendAbort = null;
+
+// ----- tabs -----
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tabpanel').forEach((p) => { p.hidden = p.id !== `tab-${name}`; });
+  if (name === 'send') updateSendTab();
+  try { localStorage.setItem('tab', name); } catch {}
+}
+document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
+document.addEventListener('click', (e) => {
+  const g = e.target.closest('[data-goto]');
+  if (g) { e.preventDefault(); showTab(g.dataset.goto); }
+});
+
+// ----- recipients -----
+function resolveOne() {
+  const v = $('oneTo').value.trim();
+  if (!v) return null;
+  const lower = v.toLowerCase();
+  // exact match on a loaded item (name, phone or id)
+  const hit = state.items.find((i) => i.id === v || i.phone === v || i.name?.toLowerCase() === lower
+    || (digits(v).length >= 6 && digits(i.phone) === digits(v)));
+  if (hit) return hit;
+  if (/@(c\.us|g\.us|newsletter)$/.test(v)) return { id: v, name: v, phone: '' };
+  const d = digits(v);
+  if (d.length >= 7 && d.length <= 15) return { id: `${d}@c.us`, name: `+${d}`, phone: `+${d}` };
+  return null;
+}
+
+function getRecipients() {
+  switch (radio('mode')) {
+    case 'one': { const r = resolveOne(); return r ? [r] : []; }
+    case 'selected': return selectedList();
+    case 'visible': return visibleItems();
+    case 'all': return [...state.items];
+    default: return [];
+  }
+}
+
+function updateSendTab() {
+  $('tabSelCount').textContent = state.selected.size;
+  $('cntSelected').textContent = state.selected.size;
+  $('cntVisible').textContent = visibleItems().length;
+  $('cntAll').textContent = state.items.length;
+
+  $('oneList').innerHTML = state.items.slice(0, 500)
+    .map((i) => `<option value="${esc(i.phone || i.id)}">${esc(i.name)}</option>`).join('');
+
+  const mode = radio('mode');
+  $('oneBox').hidden = mode !== 'one';
+  const hints = {
+    selected: 'Sends to every number you ticked in the Select & Export tab.',
+    visible: 'Sends to every number that matches the current filters in the Select & Export tab.',
+    all: 'Sends to EVERY loaded chat/contact. Double-check before sending.',
+  };
+  $('modeHint').hidden = mode === 'one';
+  $('modeHint').textContent = hints[mode] || '';
+
+  if (mode === 'one') {
+    const r = resolveOne();
+    $('oneResolved').textContent = r ? `→ ${r.name} (${r.id})` : ($('oneTo').value ? 'Not a valid number yet — include the country code.' : 'Type a number with its country code, or pick a loaded contact.');
+  }
+
+  const rec = getRecipients();
+  $('recipCount').textContent = `${rec.length}`;
+  $('recipChips').innerHTML = rec.length
+    ? rec.slice(0, 60).map((r) => `<span class="chip">${esc(r.name && r.name !== r.phone ? `${r.name} · ${r.phone || r.id}` : r.phone || r.id)}</span>`).join('')
+      + (rec.length > 60 ? `<span class="muted">+${rec.length - 60} more</span>` : '')
+    : '<span class="muted">No recipients.</span>';
+  $('sendNowBtn').textContent = rec.length === 1 ? 'Send now to 1 chat' : `Send now to ${rec.length} chats`;
+  updateBubble(rec[0]);
+}
+
+// ----- message type -----
+function updateType() {
+  const t = radio('mtype');
+  document.querySelectorAll('[data-type]').forEach((el) => { el.hidden = !el.dataset.type.split(' ').includes(t); });
+  $('textLabel').textContent = t === 'media' ? 'Caption (optional)' : 'Message text';
+  updateBubble(getRecipients()[0]);
+}
+function updateMediaSrc() {
+  const src = radio('msrc');
+  $('fileBox').hidden = src !== 'file';
+  $('urlBox').hidden = src !== 'url';
+  updateBubble(getRecipients()[0]);
+}
+
+const fillTokens = (s, r) => String(s || '').replaceAll('{name}', r?.name || '{name}').replaceAll('{phone}', r?.phone || '{phone}');
+function updateBubble(r) {
+  const t = radio('mtype');
+  const text = $('msgText').value;
+  $('charCount').textContent = `${text.length} chars`;
+  let html = '';
+  if (t === 'text') html = esc(fillTokens(text, r)) || '<span class="muted">Write a message…</span>';
+  if (t === 'media') {
+    const name = radio('msrc') === 'file' ? (media?.filename || 'no file chosen') : ($('mediaUrl').value || 'no URL');
+    html = `📎 <b>${esc(name)}</b>${text ? '\n' + esc(fillTokens(text, r)) : ''}`;
+  }
+  if (t === 'poll') {
+    const opts = pollOptions();
+    html = `📊 <b>${esc(fillTokens($('pollQ').value, r) || 'Question…')}</b>\n` + opts.map((o) => `○ ${esc(o)}`).join('\n')
+      + ($('pollMulti').checked ? '\n<span class="muted">(multiple answers)</span>' : '');
+  }
+  $('bubble').innerHTML = html;
+}
+
+// ----- tokens -----
+document.querySelectorAll('[data-token]').forEach((b) => (b.onclick = () => {
+  const ta = $('msgText');
+  const [a, z] = [ta.selectionStart, ta.selectionEnd];
+  ta.value = ta.value.slice(0, a) + b.dataset.token + ta.value.slice(z);
+  ta.focus(); ta.selectionStart = ta.selectionEnd = a + b.dataset.token.length;
+  updateBubble(getRecipients()[0]);
+}));
+
+// ----- file upload -> base64 -----
+$('mediaFile').onchange = () => {
+  const f = $('mediaFile').files[0];
+  media = null; $('filePreview').hidden = true;
+  if (!f) { $('fileInfo').textContent = 'Max ~16 MB.'; return updateBubble(getRecipients()[0]); }
+  if (f.size > 16 * 1024 * 1024) { toast('File is larger than 16 MB'); $('mediaFile').value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = String(reader.result);
+    media = { data_base64: dataUrl.slice(dataUrl.indexOf(',') + 1), mime_type: f.type || 'application/octet-stream', filename: f.name };
+    $('fileInfo').textContent = `${f.name} · ${(f.size / 1024).toFixed(0)} KB · ${media.mime_type}`;
+    if (f.type.startsWith('image/')) { $('filePreview').src = dataUrl; $('filePreview').hidden = false; }
+    updateBubble(getRecipients()[0]);
+  };
+  reader.readAsDataURL(f);
 };
+
+// ----- poll options -----
+function addPollOption(value = '') {
+  const n = $('pollOpts').children.length;
+  if (n >= 12) return toast('WhatsApp polls allow at most 12 options');
+  const row = document.createElement('div');
+  row.className = 'pollopt';
+  row.innerHTML = `<input type="text" placeholder="Option ${n + 1}" value="${esc(value)}" /><button class="btn mini" title="Remove">✕</button>`;
+  row.querySelector('button').onclick = () => { row.remove(); updateBubble(getRecipients()[0]); };
+  row.querySelector('input').oninput = () => updateBubble(getRecipients()[0]);
+  $('pollOpts').appendChild(row);
+}
+const pollOptions = () => [...$('pollOpts').querySelectorAll('input')].map((i) => i.value.trim()).filter(Boolean);
+$('addOpt').onclick = () => addPollOption();
+addPollOption(); addPollOption();
+
+// ----- wiring -----
+document.querySelectorAll('input[name="mode"]').forEach((r) => (r.onchange = updateSendTab));
+document.querySelectorAll('input[name="mtype"]').forEach((r) => (r.onchange = updateType));
+document.querySelectorAll('input[name="msrc"]').forEach((r) => (r.onchange = updateMediaSrc));
+$('oneTo').addEventListener('input', updateSendTab);
+['msgText', 'pollQ', 'mediaUrl'].forEach((id) => $(id).addEventListener('input', () => updateBubble(getRecipients()[0])));
+$('pollMulti').onchange = () => updateBubble(getRecipients()[0]);
+
+// ----- build payload -----
+function buildPayload(recipients) {
+  const type = radio('mtype');
+  const payload = { recipients, type, text: $('msgText').value, delayMs: (Number($('sendDelay').value) || 3) * 1000 };
+  if (type === 'text' && !payload.text.trim()) throw new Error('Write a message first');
+  if (type === 'media') {
+    const kind = $('mediaKind').value || undefined;
+    if (radio('msrc') === 'file') {
+      if (!media) throw new Error('Choose a file to send');
+      payload.media = { ...media, kind };
+    } else {
+      const url = $('mediaUrl').value.trim();
+      if (!/^https:\/\//i.test(url)) throw new Error('Media URL must be a public https:// link');
+      payload.media = { url, kind };
+    }
+  }
+  if (type === 'poll') {
+    const options = pollOptions();
+    if (!$('pollQ').value.trim()) throw new Error('Write the poll question');
+    if (options.length < 2) throw new Error('A poll needs at least 2 options');
+    payload.poll = { question: $('pollQ').value.trim(), options, allow_multiple: $('pollMulti').checked };
+  }
+  return payload;
+}
+
+// ----- send (streams NDJSON progress) -----
+$('sendNowBtn').onclick = async () => {
+  const recipients = getRecipients();
+  if (!recipients.length) return toast(radio('mode') === 'one' ? 'Enter a valid phone number' : 'No recipients — load/select numbers first');
+  let payload;
+  try { payload = buildPayload(recipients); } catch (e) { return toast(e.message); }
+
+  const what = { text: 'text message', media: 'media message', poll: 'poll' }[payload.type];
+  const secs = Math.round(((recipients.length - 1) * payload.delayMs) / 1000);
+  const who = recipients.length === 1 ? (recipients[0].phone || recipients[0].id) : `${recipients.length} chats`;
+  if (!confirm(`Send this ${what} NOW to ${who}?${recipients.length > 1 ? `\nEstimated time: ~${secs}s` : ''}`)) return;
+
+  const log = $('sendLog');
+  log.textContent = '';
+  $('progWrap').hidden = false; $('progBar').style.width = '0%';
+  $('sendNowBtn').disabled = true; $('stopBtn').hidden = false;
+  sendAbort = new AbortController();
+
+  try {
+    const res = await fetch('/api/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload), signal: sendAbort.signal,
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', total = recipients.length, doneCount = 0;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line) continue;
+        const ev = JSON.parse(line);
+        if (ev.event === 'start') { total = ev.total; log.textContent += `Sending ${ev.type} to ${ev.total} chat(s)…\n`; }
+        if (ev.event === 'result') {
+          doneCount++;
+          log.textContent += `${ev.ok ? '✔' : '✖'} ${ev.name ? ev.name + ' · ' : ''}${ev.id}${ev.ok ? '' : ' — ' + ev.error}\n`;
+          $('progBar').style.width = `${Math.round((doneCount / total) * 100)}%`;
+          log.scrollTop = log.scrollHeight;
+        }
+        if (ev.event === 'done') {
+          log.textContent += `\nDone: ${ev.sent} sent, ${ev.failed} failed${ev.stopped ? ' (stopped)' : ''}.`;
+          toast(`Sent ${ev.sent}/${ev.total}`);
+        }
+      }
+    }
+  } catch (e) {
+    log.textContent += e.name === 'AbortError' ? '\n■ Stopped by you. Messages already sent were not recalled.' : `\nError: ${e.message}`;
+  } finally {
+    $('sendNowBtn').disabled = false; $('stopBtn').hidden = true; sendAbort = null;
+  }
+};
+$('stopBtn').onclick = () => sendAbort?.abort();
+
+// ----- init -----
+updateType(); updateMediaSrc(); updateSendTab();
+try { if (localStorage.getItem('tab') === 'send') showTab('send'); } catch {}

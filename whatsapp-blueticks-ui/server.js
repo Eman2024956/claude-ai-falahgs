@@ -12,7 +12,7 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '25mb' })); // large enough for media uploads (base64)
 app.use(express.static(path.join(__dirname, 'public')));
 
 const wrap = (fn) => (req, res) => fn(req, res).catch((err) => {
@@ -128,26 +128,71 @@ app.post('/api/messages', wrap(async (req, res) => {
   res.json(await fetchMessages(chatIds, { since, until, limit, query }));
 }));
 
-// ---------- send text to selected chats ----------
-// Body: { recipients:[{id,name}], text, delayMs }   — supports {name} and {phone} tokens
-app.post('/api/send', wrap(async (req, res) => {
-  const { recipients = [], text = '', delayMs = 3000 } = req.body;
-  if (!recipients.length || !text.trim()) return res.status(400).json({ error: 'recipients and text are required' });
-  const results = [];
-  for (const [i, r] of recipients.entries()) {
-    const body = text.replaceAll('{name}', r.name || '').replaceAll('{phone}', r.phone || phoneFromChatId(r.id));
-    try {
-      const data = await callTool('chats_write', {
-        action: 'send_message_text', chat_id: r.id, text: body,
-        idempotency_key: `ui-${Date.now()}-${i}`.slice(0, 64),
-      });
-      results.push({ id: r.id, ok: true, data });
-    } catch (err) {
-      results.push({ id: r.id, ok: false, error: err.message });
-    }
-    if (i < recipients.length - 1) await sleep(Math.max(1000, Number(delayMs) || 0));
+// ---------- send any message (text / media / poll) to one, selected or all ----------
+// Body: {
+//   recipients: [{id, name, phone}],          // one or many chat ids
+//   type: 'text' | 'media' | 'poll',
+//   text,                                     // text, or the caption for media
+//   media: { data_base64 | url, mime_type, filename, kind },
+//   poll:  { question, options: [..], allow_multiple },
+//   delayMs
+// }
+// Streams progress as NDJSON (one JSON object per line), so the UI shows each result live.
+// {name} and {phone} in text, caption and poll question are filled in per recipient.
+const fill = (s, r) => String(s ?? '')
+  .replaceAll('{name}', r.name || '')
+  .replaceAll('{phone}', r.phone || phoneFromChatId(r.id));
+
+function buildSendArgs(type, r, { text, media, poll }) {
+  if (type === 'media') {
+    if (!media?.data_base64 && !media?.url) throw new Error('media needs a file or a URL');
+    const m = { ...media };
+    if (text) m.caption = fill(text, r);
+    for (const k of Object.keys(m)) if (m[k] === '' || m[k] == null) delete m[k];
+    return { action: 'send_message_media', chat_id: r.id, media: m };
   }
-  res.json({ sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, results });
+  if (type === 'poll') {
+    const options = (poll?.options || []).map((o) => String(o).trim()).filter(Boolean);
+    if (!poll?.question?.trim() || options.length < 2 || options.length > 12) throw new Error('poll needs a question and 2-12 options');
+    return { action: 'send_message_poll', chat_id: r.id, poll: { question: fill(poll.question, r), options, allow_multiple: !!poll.allow_multiple } };
+  }
+  if (!String(text || '').trim()) throw new Error('text is empty');
+  return { action: 'send_message_text', chat_id: r.id, text: fill(text, r) };
+}
+
+app.post('/api/send', wrap(async (req, res) => {
+  const { recipients = [], type = 'text', text = '', media, poll, delayMs = 3000 } = req.body;
+  // Remove duplicates and anything that isn't a chat id
+  const seen = new Set();
+  const list = recipients.filter((r) => r?.id && /@(c\.us|g\.us|newsletter)$/.test(r.id) && !seen.has(r.id) && seen.add(r.id));
+  if (!list.length) return res.status(400).json({ error: 'No valid recipients' });
+  try { buildSendArgs(type, list[0], { text, media, poll }); } catch (err) { return res.status(400).json({ error: err.message }); }
+
+  let aborted = false;
+  res.on('close', () => { if (!res.writableEnded) aborted = true; });
+  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  const emit = (o) => res.write(JSON.stringify(o) + '\n');
+  emit({ event: 'start', total: list.length, type });
+
+  const batchId = Date.now().toString(36);
+  let sent = 0, failed = 0;
+  for (const [i, r] of list.entries()) {
+    if (aborted) break;
+    try {
+      const args = buildSendArgs(type, r, { text, media, poll });
+      args.idempotency_key = `ui-${batchId}-${i}`;
+      const data = await callTool('chats_write', args);
+      sent++;
+      emit({ event: 'result', index: i, id: r.id, name: r.name, ok: true, data });
+    } catch (err) {
+      failed++;
+      emit({ event: 'result', index: i, id: r.id, name: r.name, ok: false, error: err.message });
+    }
+    if (i < list.length - 1 && !aborted) await sleep(Math.max(1000, Number(delayMs) || 0));
+  }
+  emit({ event: 'done', sent, failed, total: list.length, stopped: aborted });
+  res.end();
 }));
 
 // ---------- ZIP export of the selected chats ----------

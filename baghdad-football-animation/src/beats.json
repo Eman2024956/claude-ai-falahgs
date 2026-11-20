@@ -1,0 +1,27 @@
+{
+  "title": "Baghdad Street Football",
+  "duration": 15,
+  "fps": 24,
+  "shots": [
+    { "name": "alley-wide", "at": 0 },
+    { "name": "dribble", "at": 4.5 },
+    { "name": "the-kick", "at": 8.6 },
+    { "name": "celebrate", "at": 11 }
+  ],
+  "cues": {
+    "title": 0.5,
+    "pass1": 0.7,
+    "pass2": 2.0,
+    "pass3": 3.2,
+    "pass4": 4.7,
+    "receive": 5.3,
+    "run-start": 4.5,
+    "kick": 8.8,
+    "dive": 8.95,
+    "goal": 9.35,
+    "goal-text": 9.45,
+    "ball-bounce": 9.9,
+    "cheer": 10.4,
+    "end-text": 12.0
+  }
+}

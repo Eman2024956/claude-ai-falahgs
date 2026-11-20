@@ -35,7 +35,7 @@ let MODE = 'mcp';
 api('/api/status')
   .then((s) => {
     MODE = s.mode || 'mcp';
-    $('status').textContent = MODE === 'rest' ? 'Blueticks REST API (send only)' : `Connected · ${s.tools.length} MCP tools`;
+    $('status').textContent = MODE === 'rest' ? `Blueticks REST API · ${new URL(s.server).host}` : `Connected · ${s.tools.length} MCP tools`;
     $('status').className = 'status ok';
     if (MODE === 'rest') applyRestMode();
   })
@@ -457,7 +457,8 @@ $('sendNowBtn').onclick = async () => {
         if (ev.event === 'start') { total = ev.total; log.textContent += `Sending ${ev.type} to ${ev.total} chat(s)…\n`; }
         if (ev.event === 'result') {
           doneCount++;
-          log.textContent += `${ev.ok ? '✔' : '✖'} ${ev.name ? ev.name + ' · ' : ''}${ev.id}${ev.ok ? '' : ' — ' + ev.error}\n`;
+          const info = ev.ok && ev.data?.messageId ? ` — ${ev.data.status || 'queued'} · id ${ev.data.messageId}${ev.data.dueDate ? ' · due ' + new Date(ev.data.dueDate).toLocaleString() : ''}` : '';
+          log.textContent += `${ev.ok ? '✔' : '✖'} ${ev.name ? ev.name + ' · ' : ''}${ev.id}${ev.ok ? info : ' — ' + ev.error}\n`;
           $('progBar').style.width = `${Math.round((doneCount / total) * 100)}%`;
           log.scrollTop = log.scrollHeight;
         }

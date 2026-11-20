@@ -33,9 +33,11 @@ export async function sendRest({ to, message = '', asset, dueDate, callbackUrl }
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.status === false) {
     if (res.status === 401 && /Invalid API key/i.test(data.message)) {
-      throw new Error('Blueticks says "Invalid API key". Copy the API key again from your Blueticks account (extension → API), or create a new one.');
+      throw new Error(`Blueticks says "Invalid API key" for ${REST_URL}. Keys only work on their own server: production keys on https://api.blueticks.co, staging keys on https://stg-api.blueticks.co (set BLUETICKS_REST_URL).`);
     }
     throw new Error(`Blueticks ${res.status}: ${data.message || res.statusText}`);
   }
-  return data; // { status: true, message: "Message queued successfuly", callbackUrl }
+  // { status: true, message: "Message queued successfuly", callbackUrl, userMessage: { _id, status, dueDate, contactList, ... } }
+  const um = data.userMessage || {};
+  return { queued: true, messageId: um._id, status: um.status, dueDate: um.dueDate, server: REST_URL, raw: data };
 }

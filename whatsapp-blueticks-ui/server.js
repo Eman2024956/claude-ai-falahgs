@@ -38,7 +38,7 @@ const MAX_CHATS_PER_REQUEST = 25; // Blueticks list_messages batch limit
 app.get('/api/config', (_req, res) => res.json({ mode: MODE }));
 
 app.get('/api/status', wrap(async (_req, res) => {
-  if (MODE === 'rest') return res.json({ connected: true, mode: 'rest', tools: [], note: 'REST API mode: the key is checked on the first send.' });
+  if (MODE === 'rest') return res.json({ connected: true, mode: 'rest', server: process.env.BLUETICKS_REST_URL || 'https://api.blueticks.co', tools: [], note: 'REST API mode: the key is checked on the first send.' });
   const tools = await listTools();
   let engine = null;
   try { engine = await callTool('engine', { action: 'status' }); } catch { /* optional */ }

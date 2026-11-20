@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Test your Blueticks API key with curl.
 #   ./test-key.sh +9647701234567 "Hello"            -> sends one message
+#   BLUETICKS_REST_URL=https://stg-api.blueticks.co ./test-key.sh +9647701234567 "Hello"   -> staging
 #   ./test-key.sh +9647701234567 "Hi" 2026-12-01T09:00:00Z   -> schedules it (UTC)
 # Works with both key types:
 #   - REST API key (no prefix)  -> POST https://api.blueticks.co/messages  (apiKey in the JSON body)
@@ -14,10 +15,11 @@ MSG="${2:-Test message from Blueticks API}"
 DUE="${3:-}"
 
 if [[ "$KEY" != bt_live_* ]]; then
-  echo "REST API → POST https://api.blueticks.co/messages  to=$TO"
+  REST="${BLUETICKS_REST_URL:-https://api.blueticks.co}"
+  echo "REST API → POST $REST/messages  to=$TO"
   BODY=$(printf '{"to":"%s","message":"%s","apiKey":"%s"%s}' "$TO" "${MSG//\"/\\\"}" "$KEY" "${DUE:+,\"dueDate\":\"$DUE\"}")
-  curl -sS -w '\nHTTP %{http_code}\n' -X POST https://api.blueticks.co/messages -H 'Content-Type: application/json' -d "$BODY"
-  echo '(200 + "Message queued successfuly" = OK.  401 "Invalid API key" = wrong key.)'
+  curl -sS -w '\nHTTP %{http_code}\n' -X POST "$REST/messages" -H 'Content-Type: application/json' -d "$BODY"
+  echo '(200/201 + "Message queued successfuly" = OK.  401 "Invalid API key" = wrong key for this server.)'
   exit 0
 fi
 

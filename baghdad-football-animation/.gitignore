@@ -2,3 +2,4 @@ node_modules/
 build/*
 !build/baghdad-street-football.html
 !build/baghdad-street-football.mp4
+__pycache__/

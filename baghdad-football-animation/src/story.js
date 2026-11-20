@@ -129,9 +129,9 @@ export function buildStory(stage, B) {
     kickLeg(zaid, t, cue.pass2); kickLeg(zaid, t, cue.pass4);
     // keeper: shuffles, dives the wrong way, then gets up holding his head
     const kx = t < cue.dive ? 0.25 * Math.sin(t * 2.6) : lerp(0.25 * Math.sin(cue.dive * 2.6), -0.4, ease.out(seg(t, cue.dive, cue.dive + 0.4)));
-    const dive = ease.out(seg(t, cue.dive, cue.dive + 0.4)) * (1 - ease.io(seg(t, 12.2, 13.0)));
+    const dive = ease.out(seg(t, cue.dive, cue.dive + 0.4));
     keeper.root.position.set(kx - 0.0, 0.22 * ease.arc(seg(t, cue.dive, cue.dive + 0.4)), -9.0);
-    keeper.pose({ walk: t < cue.dive ? 0.35 : 0, phase: t * 1.3, yaw: 0, blinkT: t + 2.1, armsUp: Math.max(dive, 0.55 * seg(t, 12.6, 13.0)), bounce: 0, smile: t > 9.6 ? 0.4 : 1 });
+    keeper.pose({ walk: t < cue.dive ? 0.35 : 0, phase: t * 1.3, yaw: 0, blinkT: t + 2.1, armsUp: dive, bounce: 0, smile: t > 9.6 ? 0.4 : 1 });
     keeper.root.rotation.z = 1.25 * dive; keeper.hips.rotation.x = t < cue.dive ? 0.2 : 0;
     // ball
     const b = ballAt(t), i = clamp(t, 0, D) * 240, dd = lerp(bDist[Math.floor(i)], bDist[Math.min(Math.floor(i) + 1, BN - 1)], i - Math.floor(i));

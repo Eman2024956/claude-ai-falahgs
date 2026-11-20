@@ -5,6 +5,17 @@ import archiver from 'archiver';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { callTool, listTools, explainError } from './src/mcpClient.js';
+import { sendRest } from './src/restClient.js';
+
+// Which Blueticks API to use:
+//   rest -> REST API  (POST api.blueticks.co/messages, apiKey in the body). Sends only: text, media URL, schedule.
+//   mcp  -> MCP server (api.blueticks.co/mcp, bt_live_ key). Full access: chats, contacts, messages, polls.
+//   auto -> mcp if the key starts with bt_live_, otherwise rest.
+const KEY = process.env.BLUETICKS_API_KEY || '';
+const MODE = (process.env.BLUETICKS_MODE || 'auto') === 'auto'
+  ? (KEY.startsWith('bt_live_') ? 'mcp' : 'rest')
+  : process.env.BLUETICKS_MODE;
+const REST_ONLY_MSG = 'This needs the Blueticks MCP API (a bt_live_ key). With the REST API key you can only send: paste numbers in the Send tab or in "paste phone numbers manually".';
 import {
   pickArray, normalizeChat, normalizeContact, normalizeMessage,
   chatIdFromPhone, phoneFromChatId, digits,
@@ -23,8 +34,11 @@ const wrap = (fn) => (req, res) => fn(req, res).catch((err) => {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const MAX_CHATS_PER_REQUEST = 25; // Blueticks list_messages batch limit
 
-// ---------- status ----------
+// ---------- config / status ----------
+app.get('/api/config', (_req, res) => res.json({ mode: MODE }));
+
 app.get('/api/status', wrap(async (_req, res) => {
+  if (MODE === 'rest') return res.json({ connected: true, mode: 'rest', tools: [], note: 'REST API mode: the key is checked on the first send.' });
   const tools = await listTools();
   let engine = null;
   try { engine = await callTool('engine', { action: 'status' }); } catch { /* optional */ }
@@ -34,6 +48,7 @@ app.get('/api/status', wrap(async (_req, res) => {
 // ---------- chats (with server-side filters) ----------
 // GET /api/chats?kind=contact|group|all&q=text&prefix=964&since=ISO&max=500&archived=1
 app.get('/api/chats', wrap(async (req, res) => {
+  if (MODE === 'rest') return res.status(400).json({ error: REST_ONLY_MSG });
   const { kind = 'all', q = '', prefix = '', since = '', archived = '' } = req.query;
   const max = Math.min(Number(req.query.max) || 500, 3000);
   const pageSize = 100;
@@ -67,6 +82,7 @@ app.get('/api/chats', wrap(async (req, res) => {
 // ---------- contacts address book ----------
 // GET /api/contacts?q=&max=1000
 app.get('/api/contacts', wrap(async (req, res) => {
+  if (MODE === 'rest') return res.status(400).json({ error: REST_ONLY_MSG });
   const max = Math.min(Number(req.query.max) || 1000, 5000);
   const out = [];
   let cursor;
@@ -123,6 +139,7 @@ async function fetchMessages(chatIds, { since, until, limit = 50, query } = {}) 
 }
 
 app.post('/api/messages', wrap(async (req, res) => {
+  if (MODE === 'rest') return res.status(400).json({ error: REST_ONLY_MSG });
   const { chatIds = [], since, until, limit, query } = req.body;
   if (!chatIds.length) return res.status(400).json({ error: 'chatIds is required' });
   res.json(await fetchMessages(chatIds, { since, until, limit, query }));
@@ -160,13 +177,26 @@ function buildSendArgs(type, r, { text, media, poll }) {
   return { action: 'send_message_text', chat_id: r.id, text: fill(text, r) };
 }
 
+const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', mp4: 'video/mp4', mov: 'video/quicktime', mp3: 'audio/mpeg', ogg: 'audio/ogg', m4a: 'audio/mp4', pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', zip: 'application/zip', txt: 'text/plain' };
+function guessMime(url = '', kind = '') {
+  const ext = (url.split('?')[0].split('.').pop() || '').toLowerCase();
+  return MIME[ext] || ({ image: 'image/jpeg', video: 'video/mp4', audio: 'audio/mpeg' }[kind]) || 'application/octet-stream';
+}
+
 app.post('/api/send', wrap(async (req, res) => {
-  const { recipients = [], type = 'text', text = '', media, poll, delayMs = 3000 } = req.body;
+  const { recipients = [], type = 'text', text = '', media, poll, delayMs = 3000, dueDate, callbackUrl } = req.body;
   // Remove duplicates and anything that isn't a chat id
   const seen = new Set();
   const list = recipients.filter((r) => r?.id && /@(c\.us|g\.us|newsletter)$/.test(r.id) && !seen.has(r.id) && seen.add(r.id));
   if (!list.length) return res.status(400).json({ error: 'No valid recipients' });
   try { buildSendArgs(type, list[0], { text, media, poll }); } catch (err) { return res.status(400).json({ error: err.message }); }
+  if (MODE === 'rest') {
+    if (type === 'poll') return res.status(400).json({ error: 'Polls are not supported by the Blueticks REST API.' });
+    if (type === 'media' && !media?.url) return res.status(400).json({ error: 'The Blueticks REST API needs a public https URL for media (file upload is not supported).' });
+    if (list.some((r) => !r.id.endsWith('@c.us'))) return res.status(400).json({ error: 'The Blueticks REST API sends to phone numbers only (no groups/channels).' });
+  } else if (dueDate) {
+    return res.status(400).json({ error: 'Scheduling is only available with the REST API key in this app.' });
+  }
 
   let aborted = false;
   res.on('close', () => { if (!res.writableEnded) aborted = true; });
@@ -180,9 +210,19 @@ app.post('/api/send', wrap(async (req, res) => {
   for (const [i, r] of list.entries()) {
     if (aborted) break;
     try {
-      const args = buildSendArgs(type, r, { text, media, poll });
-      args.idempotency_key = `ui-${batchId}-${i}`;
-      const data = await callTool('chats_write', args);
+      let data;
+      if (MODE === 'rest') {
+        data = await sendRest({
+          to: r.id,
+          message: fill(text, r),
+          asset: type === 'media' ? { url: media.url, type: media.mime_type || guessMime(media.url, media.kind) } : undefined,
+          dueDate, callbackUrl,
+        });
+      } else {
+        const args = buildSendArgs(type, r, { text, media, poll });
+        args.idempotency_key = `ui-${batchId}-${i}`;
+        data = await callTool('chats_write', args);
+      }
       sent++;
       emit({ event: 'result', index: i, id: r.id, name: r.name, ok: true, data });
     } catch (err) {
@@ -202,6 +242,7 @@ const extFromMime = (m = '') => (m.split('/')[1] || 'bin').split(';')[0].replace
 
 // Body: { chats:[{id,name,phone,kind}], since, until, limit, includeMedia, maxMediaPerChat }
 app.post('/api/export', wrap(async (req, res) => {
+  if (MODE === 'rest') return res.status(400).json({ error: REST_ONLY_MSG });
   const { chats = [], since, until, limit = 200, includeMedia = false, maxMediaPerChat = 20 } = req.body;
   if (!chats.length) return res.status(400).json({ error: 'chats is required' });
 
@@ -273,4 +314,4 @@ app.get('/api/source.zip', (_req, res) => {
 });
 
 const PORT = Number(process.env.PORT) || 3000;
-app.listen(PORT, () => console.log(`WhatsApp Blueticks UI → http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`WhatsApp Blueticks UI → http://localhost:${PORT}  (Blueticks ${MODE.toUpperCase()} API)`));

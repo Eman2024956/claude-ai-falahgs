@@ -30,9 +30,15 @@ function download(name, text, type = 'text/csv') {
   a.download = name; a.click(); URL.revokeObjectURL(a.href);
 }
 
-// ---------- status ----------
+// ---------- status / mode ----------
+let MODE = 'mcp';
 api('/api/status')
-  .then((s) => { $('status').textContent = `Connected · ${s.tools.length} MCP tools`; $('status').className = 'status ok'; })
+  .then((s) => {
+    MODE = s.mode || 'mcp';
+    $('status').textContent = MODE === 'rest' ? 'Blueticks REST API (send only)' : `Connected · ${s.tools.length} MCP tools`;
+    $('status').className = 'status ok';
+    if (MODE === 'rest') applyRestMode();
+  })
   .catch((e) => { $('status').textContent = 'Not connected: ' + e.message; $('status').className = 'status err'; });
 
 // ---------- loading ----------
@@ -290,7 +296,8 @@ function updateSendTab() {
     ? rec.slice(0, 60).map((r) => `<span class="chip">${esc(r.name && r.name !== r.phone ? `${r.name} · ${r.phone || r.id}` : r.phone || r.id)}</span>`).join('')
       + (rec.length > 60 ? `<span class="muted">+${rec.length - 60} more</span>` : '')
     : '<span class="muted">No recipients.</span>';
-  $('sendNowBtn').textContent = rec.length === 1 ? 'Send now to 1 chat' : `Send now to ${rec.length} chats`;
+  const verb = $('dueDate')?.value ? 'Schedule for' : 'Send now to';
+  $('sendNowBtn').textContent = rec.length === 1 ? `${verb} 1 chat` : `${verb} ${rec.length} chats`;
   updateBubble(rec[0]);
 }
 
@@ -380,6 +387,14 @@ $('pollMulti').onchange = () => updateBubble(getRecipients()[0]);
 function buildPayload(recipients) {
   const type = radio('mtype');
   const payload = { recipients, type, text: $('msgText').value, delayMs: (Number($('sendDelay').value) || 3) * 1000 };
+  if (MODE === 'rest') {
+    if ($('dueDate').value) {
+      const due = new Date($('dueDate').value);
+      if (due < new Date()) throw new Error('Schedule time is in the past');
+      payload.dueDate = due.toISOString();
+    }
+    if ($('callbackUrl').value.trim()) payload.callbackUrl = $('callbackUrl').value.trim();
+  }
   if (type === 'text' && !payload.text.trim()) throw new Error('Write a message first');
   if (type === 'media') {
     const kind = $('mediaKind').value || undefined;
@@ -411,7 +426,8 @@ $('sendNowBtn').onclick = async () => {
   const what = { text: 'text message', media: 'media message', poll: 'poll' }[payload.type];
   const secs = Math.round(((recipients.length - 1) * payload.delayMs) / 1000);
   const who = recipients.length === 1 ? (recipients[0].phone || recipients[0].id) : `${recipients.length} chats`;
-  if (!confirm(`Send this ${what} NOW to ${who}?${recipients.length > 1 ? `\nEstimated time: ~${secs}s` : ''}`)) return;
+  const when = payload.dueDate ? `at ${new Date(payload.dueDate).toLocaleString()}` : 'NOW';
+  if (!confirm(`Send this ${what} ${when} to ${who}?${recipients.length > 1 ? `\nEstimated time: ~${secs}s` : ''}`)) return;
 
   const log = $('sendLog');
   log.textContent = '';
@@ -458,6 +474,32 @@ $('sendNowBtn').onclick = async () => {
   }
 };
 $('stopBtn').onclick = () => sendAbort?.abort();
+
+// ----- REST API mode: only what POST /messages supports -----
+function applyRestMode() {
+  $('restBanner').hidden = false;
+  $('restOpts').hidden = false;
+  // no polls
+  const poll = document.querySelector('input[name="mtype"][value="poll"]');
+  poll.closest('label').hidden = true;
+  if (poll.checked) document.querySelector('input[name="mtype"][value="text"]').checked = true;
+  // media from URL only
+  const file = document.querySelector('input[name="msrc"][value="file"]');
+  file.closest('label').hidden = true;
+  document.querySelector('input[name="msrc"][value="url"]').checked = true;
+  $('mediaKind').closest('label').hidden = true;
+  $('mediaUrl').placeholder = 'https://example.com/photo.jpg (public link: image, video, PDF…)';
+  // loading from WhatsApp is not available
+  $('loadBtn').disabled = true;
+  $('loadBtn').title = 'Needs the Blueticks MCP API (bt_live_ key)';
+  document.querySelector('.manual').open = true;
+  updateType(); updateMediaSrc(); updateSendTab();
+}
+$('dueDate').addEventListener('input', () => {
+  const v = $('dueDate').value;
+  $('sendNowBtn').dataset.when = v ? 'schedule' : '';
+  updateSendTab();
+});
 
 // ----- init -----
 updateType(); updateMediaSrc(); updateSendTab();

@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
-# Test your Blueticks API key and (optionally) send one WhatsApp text with curl.
-#   ./test-key.sh                       -> checks the key, lists tools, shows the WhatsApp connection
-#   ./test-key.sh +9647701234567 "Hi"   -> also sends "Hi" to that number
+# Test your Blueticks API key with curl.
+#   ./test-key.sh +9647701234567 "Hello"            -> sends one message
+#   ./test-key.sh +9647701234567 "Hi" 2026-12-01T09:00:00Z   -> schedules it (UTC)
+# Works with both key types:
+#   - REST API key (no prefix)  -> POST https://api.blueticks.co/messages  (apiKey in the JSON body)
+#   - MCP key (bt_live_...)     -> https://api.blueticks.co/mcp            (Authorization: Bearer)
 set -euo pipefail
 [ -f .env ] && set -a && . ./.env && set +a
-URL="${BLUETICKS_MCP_URL:-https://api.blueticks.co/mcp}"
 KEY="${BLUETICKS_API_KEY:?Set BLUETICKS_API_KEY in .env}"
-H=(-H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream')
+TO="${1:?Usage: ./test-key.sh +9647701234567 \"message\" [dueDateUTC]}"
+TO="+$(echo "$TO" | tr -cd '0-9')"
+MSG="${2:-Test message from Blueticks API}"
+DUE="${3:-}"
 
-echo "1) initialize"
+if [[ "$KEY" != bt_live_* ]]; then
+  echo "REST API → POST https://api.blueticks.co/messages  to=$TO"
+  BODY=$(printf '{"to":"%s","message":"%s","apiKey":"%s"%s}' "$TO" "${MSG//\"/\\\"}" "$KEY" "${DUE:+,\"dueDate\":\"$DUE\"}")
+  curl -sS -w '\nHTTP %{http_code}\n' -X POST https://api.blueticks.co/messages -H 'Content-Type: application/json' -d "$BODY"
+  echo '(200 + "Message queued successfuly" = OK.  401 "Invalid API key" = wrong key.)'
+  exit 0
+fi
+
+URL="${BLUETICKS_MCP_URL:-https://api.blueticks.co/mcp}"
+H=(-H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream')
+echo "MCP API → $URL"
 SID=$(curl -sS -D - -o /tmp/bt_init.json "$URL" "${H[@]}" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test-key","version":"1"}}}' \
   | awk -F': ' 'tolower($1)=="mcp-session-id"{print $2}' | tr -d '\r')
-cat /tmp/bt_init.json; echo
-grep -q invalid_token /tmp/bt_init.json && { echo "❌ Key rejected. Create a new bt_live_ key on the Blueticks API page."; exit 1; }
+grep -q invalid_token /tmp/bt_init.json && { cat /tmp/bt_init.json; echo; echo "❌ Key rejected."; exit 1; }
 [ -n "$SID" ] && H+=(-H "mcp-session-id: $SID")
 curl -sS "$URL" "${H[@]}" -d '{"jsonrpc":"2.0","method":"notifications/initialized"}' >/dev/null
-
-call() { curl -sS "$URL" "${H[@]}" -d "{\"jsonrpc\":\"2.0\",\"id\":$1,\"method\":\"tools/call\",\"params\":{\"name\":\"$2\",\"arguments\":$3}}"; echo; }
-
-echo "2) WhatsApp connection (engine)"
-call 2 engine '{"action":"status"}'
-
-if [ $# -ge 1 ]; then
-  NUM=$(echo "$1" | tr -cd '0-9'); TEXT="${2:-Test message from Blueticks MCP}"
-  echo "3) send text to +$NUM"
-  call 3 chats_write "{\"action\":\"send_message_text\",\"chat_id\":\"$NUM@c.us\",\"text\":\"$TEXT\"}"
-fi
+curl -sS "$URL" "${H[@]}" -d "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"chats_write\",\"arguments\":{\"action\":\"send_message_text\",\"chat_id\":\"${TO#+}@c.us\",\"text\":\"${MSG//\"/\\\"}\"}}}"; echo

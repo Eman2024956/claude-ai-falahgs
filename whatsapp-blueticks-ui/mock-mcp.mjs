@@ -1,4 +1,4 @@
-// Local mock of the Blueticks MCP server for testing (node mock-mcp.mjs, then BLUETICKS_MCP_URL=http://localhost:4100/mcp)
+// Local mock of the Blueticks MCP server + REST API for testing (node mock-mcp.mjs, then BLUETICKS_MCP_URL=http://localhost:4100/mcp)
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -33,5 +33,13 @@ app.post('/mcp', async (req, res) => {
   const t = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   res.on('close', () => t.close());
   await build().connect(t); await t.handleRequest(req, res, req.body);
+});
+// Mock of the Blueticks REST API: POST /messages (apiKey "test-key" is valid)
+app.post('/messages', (req, res) => {
+  const { to, message, apiKey, asset, dueDate, callbackUrl } = req.body || {};
+  if (!apiKey) return res.status(401).json({ name: 'NotAuthenticated', message: 'Not authenticated', code: 401 });
+  if (apiKey !== 'test-key') return res.status(401).json({ name: 'NotAuthenticated', message: 'Invalid API key', code: 401 });
+  console.log('REST', to, message, asset ? JSON.stringify(asset) : '', dueDate || '', callbackUrl || '');
+  res.json({ status: true, message: 'Message queued successfuly', callbackUrl: callbackUrl || 'Not supplied' });
 });
 app.listen(4100, () => console.log('mock MCP on :4100'));

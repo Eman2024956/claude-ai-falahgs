@@ -8,7 +8,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="dot"></span> WhatsApp Number Selector <small>via Blueticks MCP</small></div>
+    <div class="brand"><span class="dot"></span> WhatsApp Number Selector <small>via Blueticks</small></div>
     <div class="status" id="status">Connecting…</div>
     <a class="btn ghost" href="/api/source.zip">⬇ Download source code (.zip)</a>
   </header>
@@ -17,6 +17,11 @@
     <button class="tab active" role="tab" data-tab="select">① Select &amp; Export</button>
     <button class="tab" role="tab" data-tab="send">② Send Message <span class="badge" id="tabSelCount">0</span></button>
   </nav>
+
+  <div class="banner" id="restBanner" hidden>
+    <b>REST API mode.</b> Your key is a Blueticks REST API key (<code>POST api.blueticks.co/messages</code>). It can only <b>send</b> text, media from a URL, and scheduled messages.
+    Loading chats, contacts and message history needs the MCP API (<code>bt_live_</code> key). You can still paste numbers manually below, or use the <a href="#" data-goto="send">Send Message</a> tab.
+  </div>
 
   <main class="layout tabpanel" id="tab-select">
     <!-- LEFT: filters + list -->
@@ -186,6 +191,17 @@
       </div>
 
       <h2>3 · Send</h2>
+      <div id="restOpts" hidden>
+        <div class="grid2">
+          <label>Schedule (optional, your local time)
+            <input type="datetime-local" id="dueDate" />
+          </label>
+          <label>Callback URL (optional)
+            <input type="url" id="callbackUrl" placeholder="https://your-server/webhook" />
+          </label>
+        </div>
+        <p class="muted">Blueticks REST API: messages are queued. WhatsApp Web must stay open with the Blueticks extension, unless you have the Campaigner package.</p>
+      </div>
       <div class="row">
         <label>Delay between messages (s) <input type="number" id="sendDelay" value="3" min="1" max="120" class="small" /></label>
       </div>

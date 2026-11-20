@@ -1,3 +1,4 @@
+[hidden]{display:none !important}
 :root{
   --bg:#f3f5f4;--panel:#fff;--ink:#14201b;--muted:#6b7a73;--line:#dde3e0;
   --green:#1f9d55;--green-ink:#fff;--soft:#e8f5ee;--red:#c0392b;--radius:12px;
@@ -90,3 +91,5 @@ code{font-size:12px}
 @media (prefers-color-scheme: dark){.bubble{background:#005c4b;color:#e9edef}}
 .progress{height:8px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:8px 0}
 .progress div{height:100%;width:0;background:var(--green);transition:width .3s}
+.banner{max-width:1368px;margin:12px auto 0;padding:10px 14px;border:1px solid var(--line);border-left:4px solid #e0a100;background:var(--panel);border-radius:8px;font-size:13px}
+@media (max-width:1400px){.banner{margin:12px 16px 0}}

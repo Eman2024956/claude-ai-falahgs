@@ -1,4 +1,4 @@
-# WhatsApp Number Selector (Blueticks MCP)
+# WhatsApp Number Selector (Blueticks REST API + MCP)
 
 A Node.js web app that connects to the **Blueticks WhatsApp MCP server** as an MCP client and gives you a UI to:
 
@@ -27,7 +27,8 @@ npm start                # open http://localhost:3000
 | Variable | Meaning |
 |---|---|
 | `BLUETICKS_MCP_URL` | `https://api.blueticks.co/mcp` (the default) |
-| `BLUETICKS_API_KEY` | Your Blueticks API key from the Blueticks **API** page. It starts with `bt_live_` and is sent as `Authorization: Bearer …` |
+| `BLUETICKS_MODE` | `auto` (default), `rest` or `mcp` |
+| `BLUETICKS_API_KEY` | Your Blueticks API key, either a REST key or a `bt_live_` MCP key |
 | `BLUETICKS_FROM_NUMBER` | Optional. The number to use if your account has more than one WhatsApp number |
 | `PORT` | Local port (default 3000) |
 
@@ -38,20 +39,48 @@ npm run mock                                                  # fake MCP server 
 BLUETICKS_MCP_URL=http://localhost:4100/mcp BLUETICKS_API_KEY=x npm start
 ```
 
+## Two Blueticks APIs: which one your key is for
+
+| | **REST API** ([Postman docs](https://documenter.getpostman.com/view/800229/TVsrG9VS)) | **MCP API** |
+|---|---|---|
+| Key looks like | `yYBiIMwqvUWBWWzxEyvPzIuIGrGcHgJG` (no prefix) | `bt_live_…` |
+| Endpoint | `POST https://api.blueticks.co/messages` | `https://api.blueticks.co/mcp` |
+| Where the key goes | JSON body field **`apiKey`** | `Authorization: Bearer` header |
+| Send text | ✅ | ✅ |
+| Send media | ✅ public URL only (`asset: {url, type}`) | ✅ URL or file upload |
+| Schedule (`dueDate`, UTC) | ✅ | — |
+| Delivery callback (`callbackUrl`) | ✅ | — |
+| Polls | — | ✅ |
+| Load chats, contacts and history, ZIP export | — | ✅ |
+
+`BLUETICKS_MODE=auto` (the default) picks **MCP** if the key starts with `bt_live_`, otherwise **REST**. In REST mode the UI hides what that API can't do, and you add recipients by pasting numbers.
+
+REST request sent by the app:
+```json
+POST https://api.blueticks.co/messages
+{ "to": "+9647701234567", "message": "Hello", "apiKey": "<your key>",
+  "asset": { "url": "https://picsum.photos/200/300", "type": "image/jpeg" },
+  "dueDate": "2026-12-01T09:00:00.000Z", "callbackUrl": "https://your-server/webhook" }
+→ { "status": true, "message": "Message queued successfuly", "callbackUrl": "Not supplied" }
+```
+With the REST API, WhatsApp Web must stay open in Chrome with the Blueticks extension, unless you have the Campaigner package.
+
 ## Before you start, and fixing common errors
 
 1. **Connect WhatsApp to Blueticks** at https://app.blueticks.co/connections, through Gateway or through the Chrome extension with web.whatsapp.com open.
-2. **Create an API key** on the Blueticks API page. It starts with `bt_live_` and is shown only once.
+2. **Get your API key** from your Blueticks account. A REST key has no prefix; an MCP key starts with `bt_live_`.
 3. **Test the key with curl**:
    ```bash
-   ./test-key.sh                          # check the key and the WhatsApp connection
-   ./test-key.sh +9647701234567 "Hello"   # also send a test message
+   ./test-key.sh +9647701234567 "Hello"                          # send a test message
+   ./test-key.sh +9647701234567 "Hello" 2026-12-01T09:00:00Z     # schedule it (REST key)
    ```
 
 | Error | What it means |
 |---|---|
 | `getaddrinfo ENOTFOUND …` | Wrong URL. Use `https://api.blueticks.co/mcp` |
-| `invalid_token` / `rejected the API key` | The key is wrong or revoked. Create a new `bt_live_` key |
+| REST `401 Invalid API key` | The field is right but the key is wrong or expired. Copy it again from Blueticks |
+| REST `401 Not authenticated` | No `apiKey` in the body |
+| MCP `invalid_token` | The key is not an MCP key, or it's revoked. Use REST mode or a `bt_live_` key |
 | `No WhatsApp is connected` (`no_engine`) | Connect your phone at app.blueticks.co/connections |
 
 ## How it works
@@ -74,6 +103,7 @@ Browser UI (public/)  ──REST──▶  Express (server.js)  ──MCP (Strea
 ```
 server.js            Express API, ZIP export, source download
 src/mcpClient.js     MCP client (connect, callTool, parse results)
+src/restClient.js    REST client (POST /messages with apiKey in the body)
 src/normalize.js     Turns Blueticks rows into stable chat/contact/message objects
 public/index.html    UI
 public/app.js        Filtering, selection, preview, export, Send Message tab

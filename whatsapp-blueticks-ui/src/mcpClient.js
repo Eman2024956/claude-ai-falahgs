@@ -9,9 +9,7 @@ const MCP_URL = process.env.BLUETICKS_MCP_URL || 'https://api.blueticks.co/mcp';
 const API_KEY = process.env.BLUETICKS_API_KEY;
 const FROM_NUMBER = process.env.BLUETICKS_FROM_NUMBER || '';
 
-if (API_KEY && !API_KEY.startsWith('bt_live_')) {
-  console.warn('[mcp] Warning: BLUETICKS_API_KEY does not start with "bt_live_". Blueticks API keys normally do — check you copied the API key from the Blueticks API page.');
-}
+
 
 let client = null;
 let connecting = null;

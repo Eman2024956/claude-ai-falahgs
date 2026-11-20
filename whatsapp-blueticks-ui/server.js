@@ -4,7 +4,7 @@ import express from 'express';
 import archiver from 'archiver';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { callTool, listTools } from './src/mcpClient.js';
+import { callTool, listTools, explainError } from './src/mcpClient.js';
 import {
   pickArray, normalizeChat, normalizeContact, normalizeMessage,
   chatIdFromPhone, phoneFromChatId, digits,
@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const wrap = (fn) => (req, res) => fn(req, res).catch((err) => {
   console.error(err);
-  if (!res.headersSent) res.status(500).json({ error: err.message });
+  if (!res.headersSent) res.status(500).json({ error: explainError(err) });
   else res.end();
 });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -187,7 +187,7 @@ app.post('/api/send', wrap(async (req, res) => {
       emit({ event: 'result', index: i, id: r.id, name: r.name, ok: true, data });
     } catch (err) {
       failed++;
-      emit({ event: 'result', index: i, id: r.id, name: r.name, ok: false, error: err.message });
+      emit({ event: 'result', index: i, id: r.id, name: r.name, ok: false, error: explainError(err) });
     }
     if (i < list.length - 1 && !aborted) await sleep(Math.max(1000, Number(delayMs) || 0));
   }

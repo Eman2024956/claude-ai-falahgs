@@ -26,8 +26,8 @@ npm start                # open http://localhost:3000
 
 | Variable | Meaning |
 |---|---|
-| `BLUETICKS_MCP_URL` | The MCP endpoint URL from your Blueticks dashboard |
-| `BLUETICKS_API_KEY` | Your Blueticks API key, sent as `Authorization: Bearer …` |
+| `BLUETICKS_MCP_URL` | `https://api.blueticks.co/mcp` (the default) |
+| `BLUETICKS_API_KEY` | Your Blueticks API key from the Blueticks **API** page. It starts with `bt_live_` and is sent as `Authorization: Bearer …` |
 | `BLUETICKS_FROM_NUMBER` | Optional. The number to use if your account has more than one WhatsApp number |
 | `PORT` | Local port (default 3000) |
 
@@ -37,6 +37,22 @@ npm start                # open http://localhost:3000
 npm run mock                                                  # fake MCP server on :4100
 BLUETICKS_MCP_URL=http://localhost:4100/mcp BLUETICKS_API_KEY=x npm start
 ```
+
+## Before you start, and fixing common errors
+
+1. **Connect WhatsApp to Blueticks** at https://app.blueticks.co/connections, through Gateway or through the Chrome extension with web.whatsapp.com open.
+2. **Create an API key** on the Blueticks API page. It starts with `bt_live_` and is shown only once.
+3. **Test the key with curl**:
+   ```bash
+   ./test-key.sh                          # check the key and the WhatsApp connection
+   ./test-key.sh +9647701234567 "Hello"   # also send a test message
+   ```
+
+| Error | What it means |
+|---|---|
+| `getaddrinfo ENOTFOUND …` | Wrong URL. Use `https://api.blueticks.co/mcp` |
+| `invalid_token` / `rejected the API key` | The key is wrong or revoked. Create a new `bt_live_` key |
+| `No WhatsApp is connected` (`no_engine`) | Connect your phone at app.blueticks.co/connections |
 
 ## How it works
 
@@ -63,6 +79,7 @@ public/index.html    UI
 public/app.js        Filtering, selection, preview, export, Send Message tab
 public/styles.css    Styles (light and dark)
 mock-mcp.mjs         Local mock of the Blueticks MCP server for testing
+test-key.sh          curl test of your API key (and optional test send)
 ```
 
 ## Notes

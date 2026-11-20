@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WhatsApp Number Selector</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="dot"></span> WhatsApp Number Selector <small>via Blueticks MCP</small></div>
+    <div class="status" id="status">Connecting…</div>
+    <a class="btn ghost" href="/api/source.zip">⬇ Download source code (.zip)</a>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: filters + list -->
+    <section class="panel">
+      <h2>1 · Load & filter numbers</h2>
+      <div class="grid2">
+        <label>Source
+          <select id="source">
+            <option value="chats">Chats (recent activity)</option>
+            <option value="contacts">Contacts (address book)</option>
+          </select>
+        </label>
+        <label>Type
+          <select id="kind">
+            <option value="contact">Mobile numbers only</option>
+            <option value="group">Groups only</option>
+            <option value="all">All</option>
+          </select>
+        </label>
+        <label>Active since
+          <input type="date" id="since" />
+        </label>
+        <label>Max to load
+          <input type="number" id="max" value="500" min="10" max="3000" step="50" />
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="archived" /> Include archived chats</label>
+      <button class="btn primary wide" id="loadBtn">Load from WhatsApp</button>
+
+      <details class="manual">
+        <summary>…or paste phone numbers manually</summary>
+        <textarea id="manualNumbers" rows="3" placeholder="+964 770 123 4567, 9647801112222&#10;one per line or comma separated"></textarea>
+        <button class="btn" id="addManualBtn">Add numbers to list</button>
+      </details>
+
+      <div class="filters">
+        <input type="search" id="q" placeholder="Filter by name or number…" />
+        <div class="grid2">
+          <label>Country code / prefix
+            <input type="text" id="prefix" placeholder="e.g. 964 or 96477" list="prefixes" />
+            <datalist id="prefixes"></datalist>
+          </label>
+          <label>Number regex
+            <input type="text" id="regex" placeholder="e.g. ^\+9647[789]" />
+          </label>
+        </div>
+        <div class="row">
+          <label class="check"><input type="checkbox" id="onlyUnread" /> Unread only</label>
+          <label class="check"><input type="checkbox" id="onlySelected" /> Selected only</label>
+        </div>
+      </div>
+
+      <div class="listhead">
+        <label class="check"><input type="checkbox" id="selectAll" /> Select all visible</label>
+        <span id="counts">0 shown · 0 selected</span>
+      </div>
+      <ul class="list" id="list"><li class="empty">Click “Load from WhatsApp” to start.</li></ul>
+    </section>
+
+    <!-- RIGHT: actions -->
+    <section class="panel">
+      <h2>2 · Selected numbers</h2>
+      <div class="chips" id="chips"><span class="muted">Nothing selected yet.</span></div>
+      <div class="row">
+        <button class="btn" id="copyBtn">Copy numbers</button>
+        <button class="btn" id="csvBtn">Download CSV</button>
+        <button class="btn" id="clearBtn">Clear selection</button>
+      </div>
+
+      <h2>3 · Preview messages</h2>
+      <div class="grid3">
+        <label>From <input type="date" id="msgSince" /></label>
+        <label>To <input type="date" id="msgUntil" /></label>
+        <label>Per chat <input type="number" id="msgLimit" value="50" min="1" max="1000" /></label>
+      </div>
+      <button class="btn wide" id="previewBtn">Preview messages of selected</button>
+      <div class="preview" id="preview"></div>
+
+      <h2>4 · Export ZIP</h2>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="includeMedia" /> Include media files</label>
+        <label>max/chat <input type="number" id="maxMedia" value="20" min="1" max="200" class="small" /></label>
+      </div>
+      <button class="btn primary wide" id="exportBtn">⬇ Download ZIP of selected chats</button>
+      <p class="muted">ZIP contains <code>selected_numbers.csv</code> and, for every chat, <code>messages.json / .txt / .csv</code> (+ media).</p>
+
+      <h2>5 · Send a message</h2>
+      <textarea id="sendText" rows="3" placeholder="Hello {name}! Tokens: {name} {phone}"></textarea>
+      <div class="row">
+        <label>Delay between sends (s) <input type="number" id="delay" value="3" min="1" max="60" class="small" /></label>
+        <button class="btn danger" id="sendBtn">Send to selected</button>
+      </div>
+      <pre class="log" id="log"></pre>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تواصل — Promo Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F7F7F7;--ink:#0A0A0A;--accent:#E07A57;--accent-2:#D9714E;--card-shadow:rgba(0,0,0,.28);--ghost:#B5B5B5;--wm:#D4D4D4;--grid:#A8A8A8;--ease-out:cubic-bezier(.22,1,.36,1);--ease-back:cubic-bezier(.34,1.56,.64,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#1b1b1b;display:grid;place-items:center;font-family:'Cairo',system-ui,sans-serif}
+.stage{position:relative;overflow:hidden;height:min(100vh,177.78vw);aspect-ratio:9/16;background:var(--bg);border-radius:1.6vh;container-type:size;line-height:1.3;cursor:pointer}
+
+/* ---------- persistent layer ---------- */
+.grid{position:absolute;left:12cqw;right:12cqw;top:31cqh;height:38cqh;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M20 16v8M16 20h8' stroke='%23A8A8A8' stroke-width='1.3'/%3E%3C/svg%3E");background-size:8cqw 8cqw;-webkit-mask-image:radial-gradient(ellipse at center,#000 55%,transparent 80%);mask-image:radial-gradient(ellipse at center,#000 55%,transparent 80%);opacity:0}
+.burst{position:absolute;width:62cqw;aspect-ratio:1;opacity:0}
+.burst svg{width:100%;height:100%;animation:spin 24s linear infinite}
+.burst.tl{left:-24cqw;top:-10cqw}.burst.br{right:-22cqw;bottom:-14cqw;width:68cqw}
+.burst.br svg{animation-direction:reverse;animation-duration:30s}
+.wm{position:absolute;bottom:11.5cqh;width:100%;text-align:center;font-weight:700;font-size:6.2cqw;color:var(--wm);letter-spacing:.02em;direction:ltr;opacity:0}
+.s1,.s2,.s3{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+
+/* ---------- scene 1 : hook ---------- */
+.s1 .l1{font-weight:500;font-size:7.4cqw;color:var(--ink);margin-bottom:-1.2cqw;opacity:0}
+.s1 .l2{font-weight:700;font-size:12.4cqw;color:var(--ink);opacity:0}
+.card{width:79cqw;height:39cqw;margin:2.4cqw 0 3.4cqw;border-radius:3.6cqw;background:var(--accent);display:grid;place-items:center;box-shadow:-4cqw 5cqw 6cqw -2cqw var(--card-shadow);opacity:0}
+.card svg{width:34cqw;height:auto;overflow:visible}
+.card .stroke{fill:none;stroke:#111;stroke-width:4.5;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100}
+.card .dots{opacity:0}
+.card .dots circle{fill:#111}
+.card .badge{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.card .badge circle{fill:#111}
+.card .badge text{font:700 14px 'Cairo',sans-serif;fill:var(--bg);direction:ltr}
+.s1 .l3{font-weight:700;font-size:9.2cqw;color:var(--ink);opacity:0}
+
+/* ---------- scene 2 : payoff ---------- */
+.bot{width:31cqw;margin-bottom:3cqw;opacity:0;transform-origin:50% 100%}
+.bot svg{width:100%;height:auto;display:block;animation:bob 1.6s ease-in-out 4.9s infinite}
+.bot .eyes{transform-origin:50% 50%;transform-box:fill-box}
+.s2 .l1{font-weight:500;font-size:6.3cqw;color:var(--ink);opacity:0}
+.s2 .l2{font-weight:700;font-size:9.4cqw;color:var(--ink);display:flex;gap:2.4cqw;margin-top:.2cqw}
+.s2 .l2 span{display:inline-block;opacity:0}
+.s2 .l3{align-self:flex-start;margin-inline-start:13cqw;margin-top:.6cqw;font-weight:500;font-size:6.6cqw;color:var(--ghost);display:flex;gap:1.8cqw;white-space:nowrap}
+.s2 .l3 .the{opacity:0}
+.s2 .l3 .type{display:inline-block;box-sizing:content-box;overflow:hidden;width:0;opacity:0;border-left:.5cqw solid var(--ghost)}
+
+/* ---------- scene 3 : brand + CTA ---------- */
+.net{width:70cqw;margin-bottom:3cqw}
+.net svg{width:100%;height:auto;display:block;overflow:visible}
+.net .ring{fill:none;stroke:var(--grid);stroke-width:1.6;stroke-dasharray:3 7;stroke-linecap:round;opacity:0}
+.net .edge{stroke:var(--ink);stroke-width:3.2;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100}
+.net .pulse{fill:var(--accent);opacity:0}
+.net .hub{opacity:0;transform-box:fill-box;transform-origin:50% 50%;filter:drop-shadow(-3px 4px 4px rgba(0,0,0,.25))}
+.net .hubc{fill:var(--accent);stroke:#fff;stroke-width:5}
+.net .ping{fill:none;stroke:var(--accent);stroke-width:2.5;opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.net .node{opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.net .node circle{fill:var(--ink);stroke:var(--bg);stroke-width:4}
+.net .node use{fill:var(--bg)}
+.s3 .brand{font-weight:900;font-size:17cqw;line-height:1.15;color:var(--ink);opacity:0}
+.s3 .bar{width:24cqw;height:1.7cqw;border-radius:1cqw;background:var(--accent);margin:.4cqw 0 2.2cqw;transform:scaleX(0);transform-origin:100% 50%}
+.s3 .tag{font-weight:500;font-size:6.4cqw;color:var(--ink);opacity:0}
+.s3 .cta{display:inline-flex;align-items:center;gap:2cqw;margin-top:4cqw;padding:1.6cqw 6.5cqw 2cqw;border-radius:99cqw;background:var(--ink);color:var(--bg);font-weight:700;font-size:6.2cqw;box-shadow:-2.5cqw 3.5cqw 4.5cqw -1.5cqw rgba(0,0,0,.35);opacity:0}
+.s3 .cta svg{width:5.4cqw;height:5.4cqw;margin-top:.4cqw}
+
+/* ---------- timeline (13.5s loop) ---------- */
+.play .grid{animation:fade .5s ease .05s forwards}
+.play .burst{animation:burstIn .9s var(--ease-back) both}.play .burst.br{animation-delay:.12s}
+.play .wm{animation:fade .6s ease .5s forwards}
+/* scene 1 · 0.2s → 4.2s */
+.play .s1 .l1{animation:fadeUp .5s var(--ease-out) .2s both,outUp .4s ease-in 3.7s forwards}
+.play .s1 .l2{animation:pop .6s var(--ease-back) .45s both,outUp .4s ease-in 3.75s forwards}
+.play .card{animation:dropIn .75s var(--ease-back) .8s both,outUp .4s ease-in 3.8s forwards}
+.play .card .stroke{animation:draw .9s var(--ease-out) 1.15s forwards}
+.play .card .stroke + .stroke{animation-delay:1.3s}
+.play .card .dots{animation:fade .3s ease 1.65s forwards}
+.play .card .dots circle{animation:hop .9s ease-in-out 1.8s infinite}
+.play .card .dots circle:nth-child(2){animation-delay:1.95s}
+.play .card .dots circle:nth-child(3){animation-delay:2.1s}
+.play .card .badge{animation:badgeIn .5s var(--ease-back) 1.85s both}
+.play .s1 .l3{animation:stamp .5s var(--ease-back) 2.05s both,outUp .4s ease-in 3.85s forwards}
+/* scene 2 · 4.2s → 9.0s */
+.play .bot{animation:squash .7s var(--ease-back) 4.2s both,outDown .4s ease-in 8.55s forwards}
+.play .bot .eyes{animation:blink 2.4s ease 5.2s infinite}
+.play .s2 .l1{animation:fadeUp .5s var(--ease-out) 4.7s both,outDown .4s ease-in 8.6s forwards}
+.play .s2 .l2 span:nth-child(1){animation:wordIn .45s var(--ease-back) 5.3s both,outDown .4s ease-in 8.6s forwards}
+.play .s2 .l2 span:nth-child(2){animation:wordIn .45s var(--ease-back) 5.55s both,outDown .4s ease-in 8.62s forwards}
+.play .s2 .l2 span:nth-child(3){animation:wordIn .45s var(--ease-back) 5.8s both,outDown .4s ease-in 8.64s forwards}
+.play .s2 .l3 .the{animation:fade .4s ease 6.4s forwards,fadeOut .3s ease 8.6s forwards}
+.play .s2 .l3 .type{animation:fade .01s linear 6.8s forwards,type 1s steps(14) 6.8s forwards,caret .7s step-end 6.8s 3,fadeOut .3s ease 8.6s forwards}
+/* scene 3 · 9.0s → 13.5s */
+.play .net{animation:outDown .4s ease-in 12.9s forwards}
+.play .net .hub{animation:pop .6s var(--ease-back) 9s both}
+.play .net .ping{animation:ping 1.6s ease-out 9.7s infinite}
+.play .net .edge{animation:draw .5s var(--ease-out) calc(9.25s + var(--i) * .08s) forwards}
+.play .net .node{animation:nodeIn .5s var(--ease-back) calc(9.45s + var(--i) * .08s) both}
+.play .net .ring{animation:fade .5s ease 9.9s forwards}
+.play .net .pulse{animation:travel 1.5s ease-in-out calc(10.1s + var(--i) * .22s) infinite}
+.play .net .pulse.back{animation-direction:reverse}
+.play .s3 .brand{animation:pop .6s var(--ease-back) 10.2s both,outDown .4s ease-in 12.95s forwards}
+.play .s3 .bar{animation:grow .5s var(--ease-out) 10.55s forwards,fadeOut .3s ease 12.95s forwards}
+.play .s3 .tag{animation:fadeUp .5s var(--ease-out) 10.8s both,outDown .4s ease-in 13s forwards}
+.play .s3 .cta{animation:stamp .5s var(--ease-back) 11.3s both,breathe 1.4s ease-in-out 11.9s infinite,outDown .4s ease-in 13.05s forwards}
+.play .s3 .cta svg{animation:nudge .9s ease-in-out 11.9s infinite}
+
+@keyframes fade{to{opacity:1}}@keyframes fadeOut{to{opacity:0}}@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes burstIn{from{opacity:0;transform:scale(0) rotate(-120deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(40%)}to{opacity:1;transform:none}}
+@keyframes pop{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
+@keyframes dropIn{0%{opacity:0;transform:translateY(-35%) rotate(-7deg) scale(.9)}60%{opacity:1;transform:translateY(4%) rotate(1.5deg)}100%{opacity:1;transform:none}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes stamp{0%{opacity:0;transform:scale(1.6);filter:blur(6px)}100%{opacity:1;transform:none;filter:none}}
+@keyframes outUp{to{opacity:0;transform:translateY(-12%) scale(.96)}}
+@keyframes outDown{to{opacity:0;transform:translateY(10%) scale(.96)}}
+@keyframes squash{0%{opacity:0;transform:scale(0)}50%{opacity:1;transform:scale(1.15,.82)}72%{transform:scale(.94,1.06)}100%{opacity:1;transform:none}}
+@keyframes bob{50%{transform:translateY(-4%)}}
+@keyframes blink{0%,88%,100%{transform:scaleY(1)}93%{transform:scaleY(.1)}}
+@keyframes wordIn{from{opacity:0;transform:translateY(60%) rotate(-4deg)}to{opacity:1;transform:none}}
+@keyframes type{to{width:var(--tw,48cqw)}}@keyframes caret{50%{border-color:transparent}}
+@keyframes hop{0%,60%,100%{transform:none}30%{transform:translateY(-6px)}}
+@keyframes badgeIn{0%{opacity:0;transform:scale(0)}100%{opacity:1;transform:scale(1)}}
+@keyframes nodeIn{0%{opacity:0;transform:scale(0)}100%{opacity:1;transform:scale(1)}}
+@keyframes ping{0%{opacity:.7;transform:scale(1)}100%{opacity:0;transform:scale(1.75)}}
+@keyframes travel{0%{opacity:0;transform:none}15%,85%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y))}}
+@keyframes grow{to{transform:scaleX(1)}}
+@keyframes breathe{50%{transform:scale(1.045)}}
+@keyframes nudge{50%{transform:translateX(-1cqw)}}
+@media (prefers-reduced-motion:reduce){.burst svg,.bot svg{animation:none}}
+</style></head><body>
+<div class="stage" id="stage" dir="rtl" role="img" aria-label="تواصل — إعلان متحرك: توقّف عن الرد على الرسائل يدويًا. مع تواصل، مساعدك الذكي يردّ ويذكّر ويتابع عملاءك على مدار الساعة. كل عملائك في مكان واحد. ابدأ الآن">
+ <div class="grid"></div>
+ <div class="burst tl"><svg viewBox="-100 -100 200 200"><g stroke="var(--accent-2)" stroke-linecap="round" fill="var(--accent-2)"><line x2="92" y2="-8" stroke-width="20"/><line x2="58" y2="66" stroke-width="18"/><line x2="-6" y2="94" stroke-width="20"/><line x2="-70" y2="52" stroke-width="17"/><line x2="-90" y2="-14" stroke-width="20"/><line x2="-48" y2="-76" stroke-width="18"/><line x2="16" y2="-90" stroke-width="20"/><line x2="68" y2="-58" stroke-width="16"/><circle r="26"/></g></svg></div>
+ <div class="burst br"><svg viewBox="-100 -100 200 200"><g stroke="var(--accent-2)" stroke-linecap="round" fill="var(--accent-2)"><line x2="-94" y2="10" stroke-width="22"/><line x2="-60" y2="-70" stroke-width="18"/><line x2="4" y2="-92" stroke-width="20"/><line x2="66" y2="-62" stroke-width="17"/><line x2="92" y2="4" stroke-width="20"/><line x2="54" y2="72" stroke-width="18"/><line x2="-20" y2="90" stroke-width="20"/><line x2="-72" y2="56" stroke-width="16"/><circle r="28"/></g></svg></div>
+
+ <!-- Scene 1 · image 1: chat bubbles flooding in -->
+ <div class="s1">
+  <div class="l1">توقّف عن الرد</div>
+  <div class="l2">على الرسائل</div>
+  <div class="card"><svg viewBox="0 0 150 120">
+   <path class="stroke" pathLength="100" d="M24 16 H84 Q96 16 96 28 V60 Q96 72 84 72 H44 L26 88 L30 72 H24 Q12 72 12 60 V28 Q12 16 24 16 Z"/>
+   <path class="stroke" pathLength="100" d="M101 46 H126 Q138 46 138 58 V88 Q138 100 126 100 H124 L128 114 L108 100 H72 Q60 100 60 88 V78"/>
+   <g class="dots"><circle cx="36" cy="44" r="5.5"/><circle cx="54" cy="44" r="5.5"/><circle cx="72" cy="44" r="5.5"/></g>
+   <g class="badge"><circle cx="130" cy="22" r="16"/><text x="130" y="27.5" text-anchor="middle">٩٩+</text></g>
+  </svg></div>
+  <div class="l3">يدويًا</div>
+ </div>
+
+ <!-- Scene 2 · image 2: the assistant mascot -->
+ <div class="s2">
+  <div class="bot"><svg viewBox="0 0 120 112" shape-rendering="crispEdges">
+   <rect x="56" y="0" width="8" height="12" fill="#111"/><rect x="52" y="0" width="16" height="8" fill="var(--accent)" stroke="#fff" stroke-width="3"/>
+   <rect x="12" y="14" width="96" height="66" fill="var(--accent)" stroke="#fff" stroke-width="5"/>
+   <rect x="2" y="36" width="12" height="20" fill="var(--accent)" stroke="#fff" stroke-width="4"/><rect x="106" y="36" width="12" height="20" fill="var(--accent)" stroke="#fff" stroke-width="4"/>
+   <g class="eyes" fill="#111"><path d="M34 34 l14 10 l-14 10 v-5 l7 -5 l-7 -5 z"/><path d="M86 34 l-14 10 l14 10 v-5 l-7 -5 l7 -5 z"/></g>
+   <rect x="24" y="80" width="22" height="24" fill="var(--accent)" stroke="#fff" stroke-width="5"/><rect x="74" y="80" width="22" height="24" fill="var(--accent)" stroke="#fff" stroke-width="5"/>
+  </svg></div>
+  <div class="l1">مع تواصل، مساعدك الذكي</div>
+  <div class="l2"><span>يردّ</span><span>ويذكّر</span><span>ويتابع</span></div>
+  <div class="l3"><span class="the">عملاءك</span><span class="type">على مدار الساعة</span></div>
+ </div>
+
+ <!-- Scene 3 · image 3: connection graph + brand CTA -->
+ <div class="s3">
+  <div class="net"><svg viewBox="0 0 300 200">
+   <defs><g id="person"><circle cy="-4.5" r="5"/><path d="M-9.5 10 Q-9.5 2 0 2 Q9.5 2 9.5 10 Z"/></g></defs>
+   <path class="ring" d="M38 40 L150 16 L262 40 L270 152 L150 184 L30 154 Z"/>
+   <line class="edge" pathLength="100" style="--i:0" x1="150" y1="100" x2="262" y2="40"/>
+   <line class="edge" pathLength="100" style="--i:1" x1="150" y1="100" x2="150" y2="16"/>
+   <line class="edge" pathLength="100" style="--i:2" x1="150" y1="100" x2="38" y2="40"/>
+   <line class="edge" pathLength="100" style="--i:3" x1="150" y1="100" x2="30" y2="154"/>
+   <line class="edge" pathLength="100" style="--i:4" x1="150" y1="100" x2="150" y2="184"/>
+   <line class="edge" pathLength="100" style="--i:5" x1="150" y1="100" x2="270" y2="152"/>
+   <circle class="pulse" r="5.5" cx="150" cy="100" style="--i:0;--x:112px;--y:-60px"/>
+   <circle class="pulse back" r="5.5" cx="150" cy="100" style="--i:1;--x:0px;--y:-84px"/>
+   <circle class="pulse" r="5.5" cx="150" cy="100" style="--i:2;--x:-112px;--y:-60px"/>
+   <circle class="pulse back" r="5.5" cx="150" cy="100" style="--i:3;--x:-120px;--y:54px"/>
+   <circle class="pulse" r="5.5" cx="150" cy="100" style="--i:4;--x:0px;--y:84px"/>
+   <circle class="pulse back" r="5.5" cx="150" cy="100" style="--i:5;--x:120px;--y:52px"/>
+   <circle class="ping" cx="150" cy="100" r="34"/>
+   <g class="hub">
+    <circle class="hubc" cx="150" cy="100" r="34"/>
+    <path fill="#fff" d="M135 87 H165 Q171 87 171 93 V106 Q171 112 165 112 H149 L140 120 L141.5 112 H135 Q129 112 129 106 V93 Q129 87 135 87 Z"/>
+    <g fill="var(--accent)"><circle cx="140" cy="99.5" r="3"/><circle cx="150" cy="99.5" r="3"/><circle cx="160" cy="99.5" r="3"/></g>
+   </g>
+   <g class="node" style="--i:0"><circle cx="262" cy="40" r="17"/><use href="#person" x="262" y="40"/></g>
+   <g class="node" style="--i:1"><circle cx="150" cy="16" r="17"/><use href="#person" x="150" y="16"/></g>
+   <g class="node" style="--i:2"><circle cx="38" cy="40" r="17"/><use href="#person" x="38" y="40"/></g>
+   <g class="node" style="--i:3"><circle cx="30" cy="154" r="17"/><use href="#person" x="30" y="154"/></g>
+   <g class="node" style="--i:4"><circle cx="150" cy="184" r="17"/><use href="#person" x="150" y="184"/></g>
+   <g class="node" style="--i:5"><circle cx="270" cy="152" r="17"/><use href="#person" x="270" y="152"/></g>
+  </svg></div>
+  <div class="brand">تواصل</div>
+  <div class="bar"></div>
+  <div class="tag">كل عملائك… في مكان واحد</div>
+  <div class="cta">ابدأ الآن<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></div>
+ </div>
+
+ <div class="wm" id="wm">@tawassl</div>
+</div>
+<script>
+const stage=document.getElementById('stage'),LOOP_MS=13500,p=new URLSearchParams(location.search);
+const typeEl=stage.querySelector('.s2 .type');
+if(p.get('handle'))document.getElementById('wm').textContent=p.get('handle');
+function measure(){typeEl.style.setProperty('--tw',typeEl.scrollWidth+'px');}
+function play(){measure();stage.classList.remove('play');void stage.offsetWidth;stage.classList.add('play');}
+play();
+if(document.fonts)document.fonts.ready.then(measure);
+addEventListener('resize',measure);
+let timer=p.get('loop')==='0'?null:setInterval(play,LOOP_MS);
+stage.addEventListener('click',()=>{play();if(timer){clearInterval(timer);timer=setInterval(play,LOOP_MS);}});
+</script></body></html>
